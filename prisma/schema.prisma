@@ -7,36 +7,281 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Draft {
-  id        String   @id @default(uuid())
-  state     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum DraftStatus {
+  editing
+  locked
+  ordered
+}
 
-  assets    Asset[]
-  orders    Order[]
+enum CartStatus {
+  active
+  converted
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
+enum OrderStatus {
+  new
+  in_production
+  shipped
+}
+
+enum LayoutItemType {
+  image
+  text
+}
+
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique @map("clerk_id")
+  email     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  addresses        UserAddress[]
+  uploadedImages   UploadedImage[]
+  drafts           Draft[]
+  carts            Cart[]
+  orders           Order[]
+
+  @@map("users")
+}
+
+model UserAddress {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  name         String
+  phone        String?
+  addressLine1 String   @map("address_line_1")
+  addressLine2 String?  @map("address_line_2")
+  city         String
+  state        String
+  postalCode   String   @map("postal_code")
+  country      String
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_addresses")
+}
+
+model ProductCategory {
+  id          String   @id @default(uuid())
+  name        String
+  status      String
+  description String?
+
+  products Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  categoryId  String   @map("category_id")
+  name        String
+  description String?
+  basePrice   Decimal  @db.Decimal(10, 2) @map("base_price")
+  status      String
+
+  category          ProductCategory      @relation(fields: [categoryId], references: [id])
+  templates         ProductTemplate[]
+  optionTypes       ProductOptionType[]
+  images            ProductImage[]
+  drafts            Draft[]
+
+  @@map("products")
+}
+
+model ProductTemplate {
+  id          String   @id @default(uuid())
+  productId   String   @map("product_id")
+  name        String
+  description String?
+  status      String
+
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  layoutItems    TemplateLayoutItem[]
+  drafts         Draft[]
+
+  @@map("product_templates")
+}
+
+model TemplateLayoutItem {
+  id             String   @id @default(uuid())
+  templateId     String   @map("template_id")
+  layoutIndex    Int      @map("layout_index")
+  type           LayoutItemType
+  editable       Boolean
+  constraintsJson Json?    @map("constraints_json")
+
+  template ProductTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@map("template_layout_items")
+}
+
+model ProductOptionType {
+  id           String   @id @default(uuid())
+  productId    String   @map("product_id")
+  name         String
+  required     Boolean
+  displayOrder Int      @map("display_order")
+
+  product       Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionValues  ProductOptionValue[]
+
+  @@map("product_option_types")
+}
+
+model ProductOptionValue {
+  id              String   @id @default(uuid())
+  optionTypeId    String   @map("option_type_id")
+  name            String
+  priceModifier   Decimal? @db.Decimal(10, 2) @map("price_modifier")
+  productDetails  Json?    @map("product_details")
+
+  optionType      ProductOptionType  @relation(fields: [optionTypeId], references: [id], onDelete: Cascade)
+  draftOptions    DraftSelectedOption[]
+
+  @@map("product_option_values")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  url       String
+  alt       String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model UploadedImage {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  cloudinaryPublicId String  @map("cloudinary_public_id")
+  originalUrl       String   @map("original_url")
+  width             Int
+  height            Int
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  draftLayoutItems DraftLayoutItemImage[]
+
+  @@map("uploaded_images")
+}
+
+model Draft {
+  id        String      @id @default(uuid())
+  userId    String      @map("user_id")
+  productId String      @map("product_id")
+  templateId String?    @map("template_id")
+  title     String?
+  status    DraftStatus
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product         Product               @relation(fields: [productId], references: [id])
+  template        ProductTemplate?      @relation(fields: [templateId], references: [id])
+  selectedOptions DraftSelectedOption[]
+  layoutItems     DraftLayoutItem[]
+  cartItems       CartItem[]
 
   @@map("drafts")
 }
 
-model Asset {
+model DraftSelectedOption {
+  draftId              String @map("draft_id")
+  productOptionValueId String @map("product_option_value_id")
+
+  draft             Draft              @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  productOptionValue ProductOptionValue @relation(fields: [productOptionValueId], references: [id], onDelete: Cascade)
+
+  @@id([draftId, productOptionValueId])
+  @@map("draft_selected_options")
+}
+
+model DraftLayoutItem {
+  id           String   @id @default(uuid())
+  draftId      String   @map("draft_id")
+  layoutIndex  Int      @map("layout_index")
+  type         LayoutItemType
+  transformJson Json?    @map("transform_json")
+
+  draft        Draft                  @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  images       DraftLayoutItemImage[]
+
+  @@map("draft_layout_items")
+}
+
+model DraftLayoutItemImage {
+  id                String   @id @default(uuid())
+  draftLayoutItemId String   @map("draft_layout_item_id")
+  uploadedImageId   String   @map("uploaded_image_id")
+  transformJson     Json?    @map("transform_json")
+
+  draftLayoutItem DraftLayoutItem @relation(fields: [draftLayoutItemId], references: [id], onDelete: Cascade)
+  uploadedImage   UploadedImage   @relation(fields: [uploadedImageId], references: [id], onDelete: Cascade)
+
+  @@map("draft_layout_item_images")
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @map("user_id")
+  status    CartStatus
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
   id        String   @id @default(uuid())
-  draftId   String
-  url       String
-  createdAt DateTime @default(now())
+  cartId    String   @map("cart_id")
+  draftId   String   @map("draft_id")
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2) @map("unit_price")
 
-  draft     Draft    @relation(fields: [draftId], references: [id])
+  cart  Cart  @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  draft Draft @relation(fields: [draftId], references: [id])
 
-  @@map("assets")
+  @@map("cart_items")
 }
 
 model Order {
-  id        String   @id @default(uuid())
-  draftId   String
-  state     String
-  createdAt DateTime @default(now())
+  id                 String        @id @default(uuid())
+  userId             String        @map("user_id")
+  totalAmount        Decimal       @db.Decimal(10, 2) @map("total_amount")
+  paymentStatus      PaymentStatus @map("payment_status")
+  orderStatus        OrderStatus   @map("order_status")
+  shippingAddressJson Json         @map("shipping_address_json")
+  createdAt          DateTime      @default(now()) @map("created_at")
 
-  draft     Draft    @relation(fields: [draftId], references: [id])
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
 
   @@map("orders")
+}
+
+model OrderItem {
+  id                  String   @id @default(uuid())
+  orderId             String   @map("order_id")
+  productNameSnapshot String   @map("product_name_snapshot")
+  variantNameSnapshot String?  @map("variant_name_snapshot")
+  quantity            Int
+  priceSnapshot       Decimal  @db.Decimal(10, 2) @map("price_snapshot")
+  designSnapshotJson  Json     @map("design_snapshot_json")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
 }
