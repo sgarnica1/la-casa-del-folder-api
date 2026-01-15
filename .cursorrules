@@ -1,0 +1,113 @@
+# Cursor Rules — Backend (la-casa-del-folder-api)
+
+## Role of this Repository
+This repository contains the BACKEND for an MVP photo-product system.
+
+Its purpose is to:
+- Enforce business rules
+- Manage draft lifecycle
+- Create immutable order snapshots
+- Enable fulfillment readiness
+
+This repository is NOT responsible for:
+- UI concerns
+- Editor UX logic
+- Rendering images
+- Real payment processing
+- Shipping integrations
+
+---
+
+## Tech Stack (DO NOT CHANGE)
+- Node.js
+- TypeScript
+- Express
+- pnpm
+- Prisma
+- PostgreSQL (Docker only)
+- Jest or Vitest
+
+The API MUST NOT be containerized.
+PostgreSQL MUST run in Docker only.
+
+---
+
+## Database Rules
+- PostgreSQL runs via docker-compose
+- No local Postgres installation required
+- Prisma is the only DB access layer
+- DATABASE_URL must come from environment variables
+
+---
+
+## Architectural Rules (Strict but Pragmatic)
+
+### 1. Clean Architecture (Pragmatic)
+- Controllers are thin
+- Use cases contain business logic
+- Prisma is allowed ONLY in repository implementations
+- Use cases MUST NOT import Prisma
+- Domain MUST NOT import Express or Prisma
+
+Avoid over-abstraction. Prefer fewer files until behavior exists.
+
+---
+
+### 2. Core Domain Concepts
+These concepts are mandatory and central:
+- Draft (mutable until locked)
+- Asset (uploaded image)
+- Order (immutable snapshot)
+
+Everything else is secondary.
+
+---
+
+### 3. Explicit State Transitions
+- Draft: `editing → locked → ordered`
+- Locked drafts cannot be modified
+- Orders are immutable after creation
+- No silent or implicit transitions
+
+State changes must be intentional and explicit.
+
+---
+
+### 4. MVP Scope Enforcement
+
+### INCLUDED
+- Create draft
+- Upload assets
+- Store layout + transforms
+- Lock draft
+- Create order with snapshot
+
+### EXCLUDED
+- Cart
+- Real payment
+- Shipping
+- Pricing rules
+- Background jobs
+- Notifications
+- Promotions
+
+If a feature does not affect the order snapshot, it is OUT OF SCOPE.
+
+---
+
+## Testing Rules
+- Every use case must have unit tests
+- Infrastructure is mocked
+- No integration tests
+- No DB tests yet
+
+---
+
+## Generation Rules for Cursor
+When generating code:
+- Prefer correctness over completeness
+- Do not invent business rules
+- Do not implement pricing or validation early
+- Do not dockerize the API
+
+If unsure whether something is setup or business logic: DO NOT IMPLEMENT IT.

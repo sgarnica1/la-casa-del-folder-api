@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Draft {
+  id        String   @id @default(uuid())
+  state     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assets    Asset[]
+  orders    Order[]
+
+  @@map("drafts")
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  draftId   String
+  url       String
+  createdAt DateTime @default(now())
+
+  draft     Draft    @relation(fields: [draftId], references: [id])
+
+  @@map("assets")
+}
+
+model Order {
+  id        String   @id @default(uuid())
+  draftId   String
+  state     String
+  createdAt DateTime @default(now())
+
+  draft     Draft    @relation(fields: [draftId], references: [id])
+
+  @@map("orders")
+}
