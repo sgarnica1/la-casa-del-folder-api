@@ -1,5 +1,5 @@
-import { AssetRepository } from "../../domain/repositories/AssetRepository";
-import { Asset } from "../../domain/entities/Asset";
+import { AssetRepository } from "../../../domain/repositories/AssetRepository";
+import { Asset } from "../../../domain/entities/Asset";
 
 export interface UploadAssetDependencies {
   assetRepository: AssetRepository;

@@ -1,9 +1,10 @@
 import express from "express";
-import { createRoutes } from "./routes";
+import { createRoutes } from "./routes/index.route";
 import { DraftController } from "./controllers/DraftController";
 import { AssetController } from "./controllers/AssetController";
 import { OrderController } from "./controllers/OrderController";
 import { HealthController } from "./controllers/HealthController";
+import { errorHandler } from "./middleware/errorHandler";
 
 export function createApp(
   draftController: DraftController,
@@ -20,6 +21,8 @@ export function createApp(
     "/api",
     createRoutes(draftController, assetController, orderController, healthController)
   );
+
+  app.use(errorHandler);
 
   return app;
 }

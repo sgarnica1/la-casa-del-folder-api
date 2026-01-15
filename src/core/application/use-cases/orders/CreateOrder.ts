@@ -1,6 +1,6 @@
-import { OrderRepository } from "../../domain/repositories/OrderRepository";
-import { DraftRepository } from "../../domain/repositories/DraftRepository";
-import { Order } from "../../domain/entities/Order";
+import { OrderRepository } from "../../../domain/repositories/OrderRepository";
+import { DraftRepository } from "../../../domain/repositories/DraftRepository";
+import { Order } from "../../../domain/entities/Order";
 
 export interface CreateOrderDependencies {
   orderRepository: OrderRepository;

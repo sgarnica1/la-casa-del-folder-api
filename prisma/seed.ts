@@ -2,13 +2,47 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const SEED_USER_ID = '00000000-0000-0000-0000-000000000000';
 const CALENDARS_CATEGORY_ID = '00000000-0000-0000-0000-000000000001';
 const PHOTO_CALENDAR_PRODUCT_ID = '00000000-0000-0000-0000-000000000002';
 const DEFAULT_TEMPLATE_ID = '00000000-0000-0000-0000-000000000003';
 
 const SEED_TIMESTAMP = new Date('2024-01-01T00:00:00.000Z');
 
+async function clean() {
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.draftLayoutItemImage.deleteMany();
+  await prisma.draftLayoutItem.deleteMany();
+  await prisma.draftSelectedOption.deleteMany();
+  await prisma.draft.deleteMany();
+  await prisma.uploadedImage.deleteMany();
+  await prisma.userAddress.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.templateLayoutItem.deleteMany();
+  await prisma.productTemplate.deleteMany();
+  await prisma.productOptionValue.deleteMany();
+  await prisma.productOptionType.deleteMany();
+  await prisma.productImage.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.productCategory.deleteMany();
+}
+
 async function main() {
+  const user = await prisma.user.upsert({
+    where: { id: SEED_USER_ID },
+    update: {},
+    create: {
+      id: SEED_USER_ID,
+      clerkId: 'user_test_seed_user',
+      email: 'test@example.com',
+      createdAt: SEED_TIMESTAMP,
+      updatedAt: SEED_TIMESTAMP,
+    },
+  });
+
   const category = await prisma.productCategory.upsert({
     where: { id: CALENDARS_CATEGORY_ID },
     update: {},
@@ -89,7 +123,21 @@ async function main() {
   }
 }
 
-main()
+async function runSeed(shouldClean = false) {
+  if (shouldClean) {
+    console.log('Cleaning database...');
+    await clean();
+    console.log('Database cleaned.');
+  }
+
+  console.log('Seeding database...');
+  await main();
+  console.log('Database seeded successfully.');
+}
+
+const shouldClean = process.argv.includes('--clean') || process.env.CLEAN === 'true';
+
+runSeed(shouldClean)
   .catch((e) => {
     console.error(e);
     process.exit(1);

@@ -3,6 +3,10 @@ import { DraftController } from "../controllers/DraftController";
 import { AssetController } from "../controllers/AssetController";
 import { OrderController } from "../controllers/OrderController";
 import { HealthController } from "../controllers/HealthController";
+import { createDraftRoutes } from "./drafts.routes";
+import { createAssetRoutes } from "./assets.routes";
+import { createOrderRoutes } from "./orders.routes";
+import { createHealthRoutes } from "./health.routes";
 
 export function createRoutes(
   draftController: DraftController,
@@ -12,14 +16,10 @@ export function createRoutes(
 ): Router {
   const router = Router();
 
-  router.get("/health", (req, res) => healthController.check(req, res));
-
-  router.post("/drafts", (req, res) => draftController.create(req, res));
-  router.post("/drafts/:id/lock", (req, res) => draftController.lock(req, res));
-
-  router.post("/assets", (req, res) => assetController.upload(req, res));
-
-  router.post("/orders", (req, res) => orderController.create(req, res));
+  router.use("/health", createHealthRoutes(healthController));
+  router.use("/drafts", createDraftRoutes(draftController));
+  router.use("/assets", createAssetRoutes(assetController));
+  router.use("/orders", createOrderRoutes(orderController));
 
   return router;
 }

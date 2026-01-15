@@ -1,5 +1,5 @@
-import { DraftRepository } from "../../domain/repositories/DraftRepository";
-import { Draft } from "../../domain/entities/Draft";
+import { DraftRepository } from "../../../domain/repositories/DraftRepository";
+import { Draft } from "../../../domain/entities/Draft";
 
 export interface LockDraftDependencies {
   draftRepository: DraftRepository;
