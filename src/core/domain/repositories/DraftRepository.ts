@@ -15,5 +15,6 @@ export interface DraftRepository {
   create(draft: Omit<Draft, "createdAt" | "updatedAt">): Promise<Draft>;
   createWithLayoutItems(input: CreateDraftWithLayoutItemsInput): Promise<DraftWithLayoutItems>;
   findById(id: string): Promise<Draft | null>;
+  findByIdWithLayoutItems(id: string): Promise<DraftWithLayoutItems | null>;
   update(id: string, updates: Partial<Draft>): Promise<Draft>;
 }

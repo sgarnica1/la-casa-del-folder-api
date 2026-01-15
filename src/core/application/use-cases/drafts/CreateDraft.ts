@@ -15,7 +15,14 @@ export interface CreateDraftInput {
 }
 
 export interface CreateDraftOutput {
-  draftId: string;
+  draft: {
+    id: string;
+    productId: string;
+    templateId: string;
+    state: DraftState;
+    createdAt: Date;
+    updatedAt: Date;
+  };
   layoutItems: Array<{
     id: string;
     layoutIndex: number;
@@ -54,7 +61,14 @@ export class CreateDraft {
     });
 
     return {
-      draftId: draftWithLayoutItems.draft.id,
+      draft: {
+        id: draftWithLayoutItems.draft.id,
+        productId: draftWithLayoutItems.draft.productId,
+        templateId: draftWithLayoutItems.draft.templateId,
+        state: draftWithLayoutItems.draft.state,
+        createdAt: draftWithLayoutItems.draft.createdAt,
+        updatedAt: draftWithLayoutItems.draft.updatedAt,
+      },
       layoutItems: draftWithLayoutItems.layoutItems.map((item) => ({
         id: item.id,
         layoutIndex: item.layoutIndex,

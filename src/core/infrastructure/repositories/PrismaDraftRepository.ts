@@ -1,6 +1,6 @@
-import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems } from "../../core/domain/repositories/DraftRepository";
-import { Draft, DraftState } from "../../core/domain/entities/Draft";
-import { DraftLayoutItem } from "../../core/domain/entities/DraftLayoutItem";
+import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems } from "../../domain/repositories/DraftRepository";
+import { Draft, DraftState } from "../../domain/entities/Draft";
+import { DraftLayoutItem } from "../../domain/entities/DraftLayoutItem";
 import { prisma } from "../prisma/client";
 import { mapPrismaError } from "../errors/PrismaErrorMapper";
 
@@ -101,6 +101,47 @@ export class PrismaDraftRepository implements DraftRepository {
       state: draft.status as DraftState,
       createdAt: draft.createdAt,
       updatedAt: draft.updatedAt,
+    };
+  }
+
+  async findByIdWithLayoutItems(id: string): Promise<DraftWithLayoutItems | null> {
+    const draft = await prisma.draft.findUnique({
+      where: { id },
+      include: {
+        layoutItems: {
+          include: {
+            images: {
+              take: 1,
+            },
+          },
+          orderBy: { layoutIndex: "asc" },
+        },
+      },
+    });
+
+    if (!draft) {
+      return null;
+    }
+
+    return {
+      draft: {
+        id: draft.id,
+        userId: draft.userId,
+        productId: draft.productId,
+        templateId: draft.templateId!,
+        state: draft.status as DraftState,
+        createdAt: draft.createdAt,
+        updatedAt: draft.updatedAt,
+      },
+      layoutItems: draft.layoutItems.map((item) => ({
+        id: item.id,
+        draftId: item.draftId,
+        layoutIndex: item.layoutIndex,
+        type: item.type as DraftLayoutItem["type"],
+        transformJson: item.transformJson as Record<string, unknown> | null,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
     };
   }
 
