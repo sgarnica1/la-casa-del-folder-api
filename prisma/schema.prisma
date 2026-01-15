@@ -40,6 +40,7 @@ model User {
   clerkId   String   @unique @map("clerk_id")
   email     String
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   addresses        UserAddress[]
   uploadedImages   UploadedImage[]
@@ -63,6 +64,7 @@ model UserAddress {
   country      String
   isDefault    Boolean  @default(false) @map("is_default")
   createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -74,6 +76,8 @@ model ProductCategory {
   name        String
   status      String
   description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   products Product[]
 
@@ -87,6 +91,8 @@ model Product {
   description String?
   basePrice   Decimal  @db.Decimal(10, 2) @map("base_price")
   status      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   category          ProductCategory      @relation(fields: [categoryId], references: [id])
   templates         ProductTemplate[]
@@ -103,6 +109,8 @@ model ProductTemplate {
   name        String
   description String?
   status      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   layoutItems    TemplateLayoutItem[]
@@ -118,6 +126,8 @@ model TemplateLayoutItem {
   type           LayoutItemType
   editable       Boolean
   constraintsJson Json?    @map("constraints_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   template ProductTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -130,6 +140,8 @@ model ProductOptionType {
   name         String
   required     Boolean
   displayOrder Int      @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   product       Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   optionValues  ProductOptionValue[]
@@ -143,6 +155,8 @@ model ProductOptionValue {
   name            String
   priceModifier   Decimal? @db.Decimal(10, 2) @map("price_modifier")
   productDetails  Json?    @map("product_details")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   optionType      ProductOptionType  @relation(fields: [optionTypeId], references: [id], onDelete: Cascade)
   draftOptions    DraftSelectedOption[]
@@ -155,6 +169,8 @@ model ProductImage {
   productId String   @map("product_id")
   url       String
   alt       String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -169,6 +185,7 @@ model UploadedImage {
   width             Int
   height            Int
   createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   draftLayoutItems DraftLayoutItemImage[]
@@ -199,6 +216,8 @@ model Draft {
 model DraftSelectedOption {
   draftId              String @map("draft_id")
   productOptionValueId String @map("product_option_value_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   draft             Draft              @relation(fields: [draftId], references: [id], onDelete: Cascade)
   productOptionValue ProductOptionValue @relation(fields: [productOptionValueId], references: [id], onDelete: Cascade)
@@ -213,6 +232,8 @@ model DraftLayoutItem {
   layoutIndex  Int      @map("layout_index")
   type         LayoutItemType
   transformJson Json?    @map("transform_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   draft        Draft                  @relation(fields: [draftId], references: [id], onDelete: Cascade)
   images       DraftLayoutItemImage[]
@@ -225,6 +246,8 @@ model DraftLayoutItemImage {
   draftLayoutItemId String   @map("draft_layout_item_id")
   uploadedImageId   String   @map("uploaded_image_id")
   transformJson     Json?    @map("transform_json")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   draftLayoutItem DraftLayoutItem @relation(fields: [draftLayoutItemId], references: [id], onDelete: Cascade)
   uploadedImage   UploadedImage   @relation(fields: [uploadedImageId], references: [id], onDelete: Cascade)
@@ -237,6 +260,7 @@ model Cart {
   userId    String     @map("user_id")
   status    CartStatus
   createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
 
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items CartItem[]
@@ -250,6 +274,8 @@ model CartItem {
   draftId   String   @map("draft_id")
   quantity  Int
   unitPrice Decimal  @db.Decimal(10, 2) @map("unit_price")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   cart  Cart  @relation(fields: [cartId], references: [id], onDelete: Cascade)
   draft Draft @relation(fields: [draftId], references: [id])
@@ -265,6 +291,7 @@ model Order {
   orderStatus        OrderStatus   @map("order_status")
   shippingAddressJson Json         @map("shipping_address_json")
   createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
 
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items OrderItem[]
@@ -280,6 +307,8 @@ model OrderItem {
   quantity            Int
   priceSnapshot       Decimal  @db.Decimal(10, 2) @map("price_snapshot")
   designSnapshotJson  Json     @map("design_snapshot_json")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
