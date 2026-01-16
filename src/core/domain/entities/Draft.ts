@@ -6,6 +6,9 @@ export enum DraftState {
 
 export interface Draft {
   id: string;
+  userId: string;
+  productId: string;
+  templateId: string;
   state: DraftState;
   createdAt: Date;
   updatedAt: Date;
