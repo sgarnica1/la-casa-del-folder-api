@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { CreateOrder } from "../../../application/use-cases/orders/CreateOrder";
 import { GetAllOrders } from "../../../application/use-cases/orders/GetAllOrders";
 import { GetOrderById } from "../../../application/use-cases/orders/GetOrderById";
@@ -8,6 +8,7 @@ import {
   UnprocessableEntityError,
   ValidationError,
 } from "../../../domain/errors/DomainErrors";
+import type { AuthRequest } from "../middleware/authMiddleware";
 
 export class OrderController {
   constructor(
@@ -16,7 +17,7 @@ export class OrderController {
     private getOrderById: GetOrderById
   ) { }
 
-  async create(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async create(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     const { draftId } = req.body as { draftId: string };
 
     if (!draftId) {
@@ -61,7 +62,7 @@ export class OrderController {
     }
   }
 
-  async getAll(_req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async getAll(_req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     try {
       const result = await this.getAllOrders.execute();
 
@@ -78,7 +79,7 @@ export class OrderController {
     }
   }
 
-  async getById(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async getById(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
     if (!id) {

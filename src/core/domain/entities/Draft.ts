@@ -1,8 +1,10 @@
-export enum DraftState {
+export enum DraftStateEnum {
   EDITING = "editing",
   LOCKED = "locked",
   ORDERED = "ordered",
 }
+
+export type DraftState = (typeof DraftStateEnum)[keyof typeof DraftStateEnum];
 
 export interface Draft {
   id: string;

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { CreateDraft } from "../../../application/use-cases/drafts/CreateDraft";
 import { GetDraftById } from "../../../application/use-cases/drafts/GetDraftById";
 import { UpdateDraft } from "../../../application/use-cases/drafts/UpdateDraft";
@@ -6,8 +6,8 @@ import { LockDraft } from "../../../application/use-cases/drafts/LockDraft";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { NotFoundError, ConflictError, ValidationError } from "../../../domain/errors/DomainErrors";
 import { DraftMutationPolicy } from "../../../domain/policies/DraftMutationPolicy";
-
-export const SEEDED_USER_ID = "00000000-0000-0000-0000-000000000000";
+import type { AuthRequest } from "../middleware/authMiddleware";
+import { DraftStateEnum } from '../../../domain/entities/Draft';
 
 export class DraftController {
   private draftMutationPolicy: DraftMutationPolicy;
@@ -29,7 +29,7 @@ export class DraftController {
    * This guard is HTTP-specific orchestration only.
    */
   mutationGuard() {
-    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
       const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
       if (!id) {
@@ -62,13 +62,18 @@ export class DraftController {
     };
   }
 
-  async create(_req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async create(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+    if (!req.userAuth) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      return;
+    }
+
     try {
-      const result = await this.createDraft.execute({ userId: SEEDED_USER_ID });
+      const result = await this.createDraft.execute({ userId: req.userAuth.userId });
 
       res.status(201).json({
         id: result.draft.id,
-        status: result.draft.state === "editing" ? "draft" : result.draft.state,
+        status: result.draft.state === DraftStateEnum.EDITING ? "draft" : result.draft.state,
         productId: result.draft.productId,
         templateId: result.draft.templateId,
         layoutItems: result.layoutItems.map((item) => ({
@@ -87,7 +92,7 @@ export class DraftController {
     }
   }
 
-  async getById(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async getById(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
     if (!id) {
@@ -116,7 +121,7 @@ export class DraftController {
     }
   }
 
-  async update(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async update(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
     if (!id) {
@@ -158,7 +163,7 @@ export class DraftController {
     }
   }
 
-  async lock(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async lock(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
     if (!id) {

@@ -35,13 +35,31 @@ enum LayoutItemType {
   text
 }
 
+enum RoleType {
+  admin
+  customer
+}
+
+model Role {
+  id        String   @id @default(uuid())
+  type      RoleType @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("roles")
+}
+
 model User {
   id        String   @id @default(uuid())
   clerkId   String   @unique @map("clerk_id")
   email     String
+  roleId    String   @map("role_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  role            Role                 @relation(fields: [roleId], references: [id])
   addresses        UserAddress[]
   uploadedImages   UploadedImage[]
   drafts           Draft[]

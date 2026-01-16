@@ -6,6 +6,8 @@ const SEED_USER_ID = '00000000-0000-0000-0000-000000000000';
 const CALENDARS_CATEGORY_ID = '00000000-0000-0000-0000-000000000001';
 const PHOTO_CALENDAR_PRODUCT_ID = '00000000-0000-0000-0000-000000000002';
 const DEFAULT_TEMPLATE_ID = '00000000-0000-0000-0000-000000000003';
+const CUSTOMER_ROLE_ID = '00000000-0000-0000-0000-000000000004';
+const ADMIN_ROLE_ID = '00000000-0000-0000-0000-000000000005';
 
 const SEED_TIMESTAMP = new Date('2024-01-01T00:00:00.000Z');
 
@@ -21,6 +23,7 @@ async function clean() {
   await prisma.uploadedImage.deleteMany();
   await prisma.userAddress.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.role.deleteMany();
   await prisma.templateLayoutItem.deleteMany();
   await prisma.productTemplate.deleteMany();
   await prisma.productOptionValue.deleteMany();
@@ -31,13 +34,36 @@ async function clean() {
 }
 
 async function main() {
-  const user = await prisma.user.upsert({
+  const customerRole = await prisma.role.upsert({
+    where: { id: CUSTOMER_ROLE_ID },
+    update: {},
+    create: {
+      id: CUSTOMER_ROLE_ID,
+      type: 'customer',
+      createdAt: SEED_TIMESTAMP,
+      updatedAt: SEED_TIMESTAMP,
+    },
+  });
+
+  await prisma.role.upsert({
+    where: { id: ADMIN_ROLE_ID },
+    update: {},
+    create: {
+      id: ADMIN_ROLE_ID,
+      type: 'admin',
+      createdAt: SEED_TIMESTAMP,
+      updatedAt: SEED_TIMESTAMP,
+    },
+  });
+
+  await prisma.user.upsert({
     where: { id: SEED_USER_ID },
     update: {},
     create: {
       id: SEED_USER_ID,
       clerkId: 'user_test_seed_user',
       email: 'test@example.com',
+      roleId: customerRole.id,
       createdAt: SEED_TIMESTAMP,
       updatedAt: SEED_TIMESTAMP,
     },
@@ -64,7 +90,7 @@ async function main() {
       categoryId: category.id,
       name: 'Photo Calendar',
       description: '12-month photo calendar',
-      basePrice: 2999,
+      basePrice: 500,
       status: 'active',
       createdAt: SEED_TIMESTAMP,
       updatedAt: SEED_TIMESTAMP,

@@ -1,13 +1,21 @@
 import { Router } from "express";
 import { OrderController } from "../controllers/OrderController";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { requireAdmin } from "../middleware/requireAdmin";
+import { createCreateOrderGuard } from "../middleware/createOrderGuard";
+import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 
-export function createOrderRoutes(orderController: OrderController): Router {
+export function createOrderRoutes(orderController: OrderController, draftRepository: DraftRepository): Router {
   const router = Router();
 
-  router.get("/", asyncHandler((req, res, next) => orderController.getAll(req, res, next)));
-  router.get("/:id", asyncHandler((req, res, next) => orderController.getById(req, res, next)));
-  router.post("/", asyncHandler((req, res, next) => orderController.create(req, res, next)));
+  const createOrderGuard = createCreateOrderGuard(draftRepository);
+
+  // Admin-only routes for dashboard
+  router.get("/", requireAdmin, asyncHandler((req, res, next) => orderController.getAll(req, res, next)));
+  router.get("/:id", requireAdmin, asyncHandler((req, res, next) => orderController.getById(req, res, next)));
+
+  // Customer route - create order (with draft ownership check)
+  router.post("/", createOrderGuard, asyncHandler((req, res, next) => orderController.create(req, res, next)));
 
   return router;
 }

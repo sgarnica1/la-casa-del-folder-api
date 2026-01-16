@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DraftState } from "../../../../domain/entities/Draft";
+import { DraftStateEnum } from "../../../../domain/entities/Draft";
 
 export const LockDraftInputSchema = z.object({
   draftId: z.uuid(),
@@ -12,7 +12,7 @@ export const LockDraftOutputSchema = z.object({
   userId: z.uuid(),
   productId: z.uuid(),
   templateId: z.uuid(),
-  state: z.nativeEnum(DraftState),
+  state: z.nativeEnum(DraftStateEnum),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

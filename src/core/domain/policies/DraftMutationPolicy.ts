@@ -1,5 +1,5 @@
 import { DraftRepository } from "../repositories/DraftRepository";
-import { DraftState } from "../entities/Draft";
+import { DraftStateEnum } from "../entities/Draft";
 import { NotFoundError, ConflictError } from "../errors/DomainErrors";
 
 /**
@@ -29,7 +29,7 @@ export class DraftMutationPolicy {
       throw new NotFoundError("Draft", draftId);
     }
 
-    if (draft.state !== DraftState.EDITING) {
+    if (draft.state !== DraftStateEnum.EDITING) {
       throw new ConflictError(
         "Draft is locked and cannot be edited",
         { draftId, status: draft.state }
