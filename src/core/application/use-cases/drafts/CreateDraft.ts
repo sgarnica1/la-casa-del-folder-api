@@ -2,7 +2,8 @@ import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { ProductRepository } from "../../../domain/repositories/ProductRepository";
 import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
 import { DraftState } from "../../../domain/entities/Draft";
-import { NotFoundError } from "../../../domain/errors";
+import { NotFoundError, ValidationError } from "../../../domain/errors";
+import { CreateDraftInputSchema, CreateDraftOutput } from "./dtos/CreateDraft.dto";
 
 export interface CreateDraftDependencies {
   draftRepository: DraftRepository;
@@ -10,30 +11,17 @@ export interface CreateDraftDependencies {
   productTemplateRepository: ProductTemplateRepository;
 }
 
-export interface CreateDraftInput {
-  userId: string;
-}
-
-export interface CreateDraftOutput {
-  draft: {
-    id: string;
-    productId: string;
-    templateId: string;
-    state: DraftState;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-  layoutItems: Array<{
-    id: string;
-    layoutIndex: number;
-    type: string;
-  }>;
-}
-
 export class CreateDraft {
   constructor(private deps: CreateDraftDependencies) { }
 
-  async execute(input: CreateDraftInput): Promise<CreateDraftOutput> {
+  async execute(input: unknown): Promise<CreateDraftOutput> {
+    const validationResult = CreateDraftInputSchema.safeParse(input);
+
+    if (!validationResult.success) {
+      throw new ValidationError("Invalid input", { issues: validationResult.error.issues });
+    }
+
+    const validatedInput = validationResult.data;
     const product = await this.deps.productRepository.findActiveProduct();
     if (!product) {
       throw new NotFoundError("Product", "active");
@@ -48,7 +36,7 @@ export class CreateDraft {
 
     const draftWithLayoutItems = await this.deps.draftRepository.createWithLayoutItems({
       draft: {
-        userId: input.userId,
+        userId: validatedInput.userId,
         productId: product.id,
         templateId: template.id,
         state: DraftState.EDITING,

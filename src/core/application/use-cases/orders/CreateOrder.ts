@@ -1,63 +1,81 @@
 import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
-import { Order, OrderState } from "../../../domain/entities/Order";
+import { ProductRepository } from "../../../domain/repositories/ProductRepository";
+import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
 import { DraftState } from "../../../domain/entities/Draft";
-import { NotFoundError } from "../../../domain/errors/DomainErrors";
-import { prisma } from "../../../infrastructure/prisma/client";
+import {
+  NotFoundError,
+  ConflictError,
+  UnprocessableEntityError,
+  ValidationError,
+} from "../../../domain/errors/DomainErrors";
+import { validateDraftCompleteness } from "../../../interface/http/middleware/draftGuards";
+import { CreateOrderInputSchema, CreateOrderOutput } from "./dtos/CreateOrder.dto";
 
 export interface CreateOrderDependencies {
   orderRepository: OrderRepository;
   draftRepository: DraftRepository;
-}
-
-export interface CreateOrderInput {
-  draftId: string;
+  productRepository: ProductRepository;
+  productTemplateRepository: ProductTemplateRepository;
 }
 
 export class CreateOrder {
   constructor(private deps: CreateOrderDependencies) { }
 
-  async execute(input: CreateOrderInput): Promise<Order> {
-    const draftWithItems = await this.deps.draftRepository.findByIdWithLayoutItems(input.draftId);
+  async execute(input: unknown): Promise<CreateOrderOutput> {
+    const validationResult = CreateOrderInputSchema.safeParse(input);
+
+    if (!validationResult.success) {
+      throw new ValidationError("Invalid input", { issues: validationResult.error.issues });
+    }
+
+    const validatedInput = validationResult.data;
+    const draftWithItems = await this.deps.draftRepository.findByIdWithLayoutItems(validatedInput.draftId);
 
     if (!draftWithItems) {
-      throw new NotFoundError("Draft", input.draftId);
+      throw new NotFoundError("Draft", validatedInput.draftId);
     }
 
     if (draftWithItems.draft.state !== DraftState.LOCKED) {
-      throw new Error("Draft must be locked before creating an order");
+      if (draftWithItems.draft.state === DraftState.ORDERED) {
+        throw new ConflictError("Draft already converted to order");
+      }
+      throw new ConflictError("Draft must be locked before creating an order");
     }
 
-    const product = await prisma.product.findUnique({
-      where: { id: draftWithItems.draft.productId },
-    });
+    if (!draftWithItems.draft.templateId) {
+      throw new UnprocessableEntityError("Draft template is missing");
+    }
+
+    const completeness = await validateDraftCompleteness(
+      validatedInput.draftId,
+      draftWithItems.draft.templateId,
+      this.deps.draftRepository,
+      this.deps.productTemplateRepository
+    );
+
+    if (!completeness.isComplete) {
+      throw new UnprocessableEntityError(
+        `Draft is incomplete. Missing images for slots: ${completeness.missingSlots.join(", ")}`
+      );
+    }
+
+    const product = await this.deps.productRepository.findById(draftWithItems.draft.productId);
 
     if (!product) {
       throw new NotFoundError("Product", draftWithItems.draft.productId);
     }
 
-    const draftData = await prisma.draft.findUnique({
-      where: { id: input.draftId },
-      include: {
-        layoutItems: {
-          include: {
-            images: {
-              include: {
-                uploadedImage: true,
-              },
-            },
-          },
-          orderBy: { layoutIndex: "asc" },
-        },
-      },
-    });
+    const draftData = await this.deps.draftRepository.findByIdWithImagesForOrder(validatedInput.draftId);
 
     if (!draftData) {
-      throw new NotFoundError("Draft", input.draftId);
+      throw new NotFoundError("Draft", validatedInput.draftId);
     }
 
+    // SNAPSHOT: Store complete image metadata in order - orders must be self-contained
+    // This ensures orders render correctly even if uploaded_images are deleted
     const designSnapshot = {
-      draftId: input.draftId,
+      draftId: validatedInput.draftId,
       productId: draftWithItems.draft.productId,
       templateId: draftWithItems.draft.templateId,
       layoutItems: draftData.layoutItems.map((item) => ({
@@ -65,50 +83,33 @@ export class CreateOrder {
         type: item.type,
         transformJson: item.transformJson,
         images: item.images.map((img) => ({
+          // SNAPSHOTTED DATA - orders must not depend on uploaded_images table
+          cloudinaryPublicId: img.uploadedImage.cloudinaryPublicId,
+          secureUrl: img.uploadedImage.originalUrl,
+          width: img.uploadedImage.width,
+          height: img.uploadedImage.height,
+          transform: img.transformJson,
+          // Optional: keep original ID for debugging only
           uploadedImageId: img.uploadedImageId,
-          uploadedImageUrl: img.uploadedImage.originalUrl,
-          transformJson: img.transformJson,
         })),
       })),
     };
 
     const SEEDED_USER_ID = "00000000-0000-0000-0000-000000000000";
 
-    const result = await prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
-        data: {
-          userId: SEEDED_USER_ID,
-          totalAmount: product.basePrice,
-          paymentStatus: "paid",
-          orderStatus: "new",
-          shippingAddressJson: {},
-          items: {
-            create: {
-              productNameSnapshot: product.name,
-              variantNameSnapshot: null,
-              quantity: 1,
-              priceSnapshot: product.basePrice,
-              designSnapshotJson: designSnapshot,
-            },
-          },
-        },
-      });
-
-      await tx.draft.update({
-        where: { id: input.draftId },
-        data: { status: "ordered" },
-      });
-
-      return order;
+    const order = await this.deps.orderRepository.createWithDraftUpdate({
+      userId: SEEDED_USER_ID,
+      draftId: validatedInput.draftId,
+      totalAmount: product.basePrice,
+      productName: product.name,
+      designSnapshot,
     });
 
-    const domainOrder: Order = {
-      id: result.id,
-      draftId: input.draftId,
-      state: OrderState.PENDING,
-      createdAt: result.createdAt,
+    return {
+      id: order.id,
+      draftId: order.draftId,
+      state: order.state,
+      createdAt: order.createdAt,
     };
-
-    return domainOrder;
   }
 }

@@ -1,9 +1,16 @@
 import { Request, Response, NextFunction } from "express";
-import { prisma } from "../../../infrastructure/prisma/client";
+import { UploadImage } from "../../../application/use-cases/assets/UploadImage";
+import { GetImagesByIds } from "../../../application/use-cases/assets/GetImagesByIds";
+import { ValidationError, NotFoundError } from "../../../domain/errors/DomainErrors";
 
-const SEEDED_USER_ID = "00000000-0000-0000-0000-000000000000";
+export const SEEDED_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export class AssetController {
+  constructor(
+    private uploadImage: UploadImage,
+    private getImagesByIds: GetImagesByIds
+  ) { }
+
   async upload(req: Request, res: Response, _next: NextFunction): Promise<void> {
     const file = req.file;
 
@@ -13,25 +20,24 @@ export class AssetController {
     }
 
     try {
-      const buffer = file.buffer;
-      const base64 = buffer.toString("base64");
-      const dataUrl = `data:${file.mimetype};base64,${base64}`;
-
-      const uploadedImage = await prisma.uploadedImage.create({
-        data: {
-          userId: SEEDED_USER_ID,
-          cloudinaryPublicId: `mvp-${Date.now()}-${file.originalname}`,
-          originalUrl: dataUrl,
-          width: 0,
-          height: 0,
+      const result = await this.uploadImage.execute({
+        userId: SEEDED_USER_ID,
+        file: {
+          buffer: file.buffer,
+          mimetype: file.mimetype,
         },
       });
 
       res.status(201).json({
-        id: uploadedImage.id,
-        url: uploadedImage.originalUrl,
+        id: result.id,
+        url: result.url,
       });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
       console.error("Upload error:", error);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to upload image" } });
     }
@@ -47,27 +53,20 @@ export class AssetController {
 
     const imageIds = ids.split(",").filter(Boolean);
 
-    if (imageIds.length === 0) {
-      res.json([]);
-      return;
-    }
-
     try {
-      const images = await prisma.uploadedImage.findMany({
-        where: {
-          id: {
-            in: imageIds,
-          },
-        },
-      });
-
-      res.json(
-        images.map((img) => ({
-          id: img.id,
-          url: img.originalUrl,
-        }))
-      );
+      const result = await this.getImagesByIds.execute({ ids: imageIds });
+      res.json(result);
     } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
+        return;
+      }
+
       console.error("Get images error:", error);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get images" } });
     }

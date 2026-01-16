@@ -11,9 +11,9 @@ export interface UploadAssetInput {
 }
 
 export class UploadAsset {
-  constructor(private deps: UploadAssetDependencies) { }
+  constructor(private _deps: UploadAssetDependencies) { }
 
-  async execute(input: UploadAssetInput): Promise<Asset> {
+  async execute(_input: UploadAssetInput): Promise<Asset> {
     throw new Error("Not implemented");
   }
 }

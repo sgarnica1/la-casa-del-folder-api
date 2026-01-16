@@ -1,8 +1,9 @@
-import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems } from "../../domain/repositories/DraftRepository";
+import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems, DraftWithLayoutItemsAndImages, UpdateLayoutItemsInput, DraftWithImagesForOrder } from "../../domain/repositories/DraftRepository";
 import { Draft, DraftState } from "../../domain/entities/Draft";
 import { DraftLayoutItem } from "../../domain/entities/DraftLayoutItem";
 import { prisma } from "../prisma/client";
 import { mapPrismaError } from "../errors/PrismaErrorMapper";
+import { Prisma } from "@prisma/client";
 
 export class PrismaDraftRepository implements DraftRepository {
   async create(draft: Omit<Draft, "createdAt" | "updatedAt">): Promise<Draft> {
@@ -50,7 +51,7 @@ export class PrismaDraftRepository implements DraftRepository {
                 draftId: draft.id,
                 layoutIndex: item.layoutIndex,
                 type: item.type as "image" | "text",
-                transformJson: item.transformJson,
+                transformJson: item.transformJson ? (item.transformJson as Prisma.InputJsonValue) : undefined,
               },
             })
           )
@@ -169,5 +170,169 @@ export class PrismaDraftRepository implements DraftRepository {
     } catch (error) {
       throw mapPrismaError(error);
     }
+  }
+
+  async findByIdWithLayoutItemsAndImages(id: string): Promise<DraftWithLayoutItemsAndImages | null> {
+    const draft = await prisma.draft.findUnique({
+      where: { id },
+      include: {
+        layoutItems: {
+          include: {
+            images: {
+              take: 1,
+            },
+          },
+          orderBy: { layoutIndex: "asc" },
+        },
+      },
+    });
+
+    if (!draft) {
+      return null;
+    }
+
+    return {
+      draft: {
+        id: draft.id,
+        userId: draft.userId,
+        productId: draft.productId,
+        templateId: draft.templateId!,
+        state: draft.status as DraftState,
+        createdAt: draft.createdAt,
+        updatedAt: draft.updatedAt,
+      },
+      layoutItems: draft.layoutItems.map((item) => ({
+        id: item.id,
+        layoutIndex: item.layoutIndex,
+        imageId: item.images[0]?.uploadedImageId || null,
+      })),
+    };
+  }
+
+  async updateLayoutItems(draftId: string, input: UpdateLayoutItemsInput): Promise<DraftWithLayoutItemsAndImages> {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        for (const item of input.layoutItems) {
+          const layoutIndex = parseInt(item.slotId.replace("slot-", ""), 10);
+
+          const draftLayoutItem = await tx.draftLayoutItem.findFirst({
+            where: {
+              draftId,
+              layoutIndex,
+            },
+          });
+
+          if (!draftLayoutItem) {
+            continue;
+          }
+
+          await tx.draftLayoutItemImage.deleteMany({
+            where: {
+              draftLayoutItemId: draftLayoutItem.id,
+            },
+          });
+
+          if (item.imageId) {
+            await tx.draftLayoutItemImage.create({
+              data: {
+                draftLayoutItemId: draftLayoutItem.id,
+                uploadedImageId: item.imageId,
+              },
+            });
+          }
+        }
+
+        await tx.draft.update({
+          where: { id: draftId },
+          data: { updatedAt: new Date() },
+        });
+
+        const updated = await tx.draft.findUnique({
+          where: { id: draftId },
+          include: {
+            layoutItems: {
+              include: {
+                images: {
+                  take: 1,
+                },
+              },
+              orderBy: { layoutIndex: "asc" },
+            },
+          },
+        });
+
+        if (!updated) {
+          throw new Error("Draft not found after update");
+        }
+
+        return updated;
+      });
+
+      return {
+        draft: {
+          id: result.id,
+          userId: result.userId,
+          productId: result.productId,
+          templateId: result.templateId!,
+          state: result.status as DraftState,
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt,
+        },
+        layoutItems: result.layoutItems.map((item) => ({
+          id: item.id,
+          layoutIndex: item.layoutIndex,
+          imageId: item.images[0]?.uploadedImageId || null,
+        })),
+      };
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
+
+  async findByIdWithImagesForOrder(id: string): Promise<DraftWithImagesForOrder | null> {
+    const draft = await prisma.draft.findUnique({
+      where: { id },
+      include: {
+        layoutItems: {
+          include: {
+            images: {
+              include: {
+                uploadedImage: true,
+              },
+            },
+          },
+          orderBy: { layoutIndex: "asc" },
+        },
+      },
+    });
+
+    if (!draft) {
+      return null;
+    }
+
+    return {
+      layoutItems: draft.layoutItems.map((item) => ({
+        layoutIndex: item.layoutIndex,
+        type: item.type,
+        transformJson: item.transformJson as Record<string, unknown> | null,
+        images: item.images.map((img) => ({
+          uploadedImageId: img.uploadedImageId,
+          transformJson: img.transformJson as Record<string, unknown> | null,
+          uploadedImage: {
+            cloudinaryPublicId: img.uploadedImage.cloudinaryPublicId,
+            originalUrl: img.uploadedImage.originalUrl,
+            width: img.uploadedImage.width,
+            height: img.uploadedImage.height,
+          },
+        })),
+      })),
+    };
+  }
+
+  async markAsOrdered(draftId: string): Promise<void> {
+    await prisma.draft.update({
+      where: { id: draftId },
+      data: { status: "ordered" },
+    });
   }
 }

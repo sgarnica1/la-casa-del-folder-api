@@ -30,6 +30,15 @@ export class ConflictError extends BaseError {
   }
 }
 
+export class UnprocessableEntityError extends BaseError {
+  readonly code = "UNPROCESSABLE_ENTITY";
+  readonly statusCode = 422;
+
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, details);
+  }
+}
+
 export class UnauthorizedError extends BaseError {
   readonly code = "UNAUTHORIZED";
   readonly statusCode = 401;

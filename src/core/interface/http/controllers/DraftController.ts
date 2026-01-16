@@ -1,222 +1,194 @@
 import { Request, Response, NextFunction } from "express";
 import { CreateDraft } from "../../../application/use-cases/drafts/CreateDraft";
+import { GetDraftById } from "../../../application/use-cases/drafts/GetDraftById";
+import { UpdateDraft } from "../../../application/use-cases/drafts/UpdateDraft";
 import { LockDraft } from "../../../application/use-cases/drafts/LockDraft";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
-import { NotFoundError } from "../../../domain/errors/DomainErrors";
+import { NotFoundError, ConflictError, ValidationError } from "../../../domain/errors/DomainErrors";
+import { DraftMutationPolicy } from "../../../domain/policies/DraftMutationPolicy";
 
 export const SEEDED_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export class DraftController {
+  private draftMutationPolicy: DraftMutationPolicy;
+
   constructor(
     private createDraft: CreateDraft,
+    private getDraftById: GetDraftById,
+    private updateDraft: UpdateDraft,
     private lockDraft: LockDraft,
-    private draftRepository: DraftRepository
-  ) { }
+    draftRepository: DraftRepository
+  ) {
+    this.draftMutationPolicy = new DraftMutationPolicy(draftRepository);
+  }
 
-  async create(req: Request, res: Response, _next: NextFunction): Promise<void> {
-    const result = await this.createDraft.execute({ userId: SEEDED_USER_ID });
+  /**
+   * HTTP GUARD: Prevents mutation of locked or ordered drafts
+   * 
+   * Uses domain policy for the actual rule enforcement.
+   * This guard is HTTP-specific orchestration only.
+   */
+  mutationGuard() {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
-    res.status(201).json({
-      id: result.draft.id,
-      status: result.draft.state === "editing" ? "draft" : result.draft.state,
-      productId: result.draft.productId,
-      templateId: result.draft.templateId,
-      layoutItems: result.layoutItems.map((item) => ({
-        id: item.id,
-        slotId: `slot-${item.layoutIndex}`,
-      })),
-      createdAt: result.draft.createdAt.toISOString(),
-      updatedAt: result.draft.updatedAt.toISOString(),
-    });
+      if (!id) {
+        res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Draft ID is required" },
+        });
+        return;
+      }
+
+      try {
+        await this.draftMutationPolicy.assertEditable(id);
+        next();
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          res.status(404).json({
+            error: { code: "NOT_FOUND", message: error.message },
+          });
+          return;
+        }
+
+        if (error instanceof ConflictError) {
+          res.status(409).json({
+            error: { code: "CONFLICT", message: error.message },
+          });
+          return;
+        }
+
+        next(error);
+      }
+    };
+  }
+
+  async create(_req: Request, res: Response, _next: NextFunction): Promise<void> {
+    try {
+      const result = await this.createDraft.execute({ userId: SEEDED_USER_ID });
+
+      res.status(201).json({
+        id: result.draft.id,
+        status: result.draft.state === "editing" ? "draft" : result.draft.state,
+        productId: result.draft.productId,
+        templateId: result.draft.templateId,
+        layoutItems: result.layoutItems.map((item) => ({
+          id: item.id,
+          slotId: `slot-${item.layoutIndex}`,
+        })),
+        createdAt: result.draft.createdAt.toISOString(),
+        updatedAt: result.draft.updatedAt.toISOString(),
+      });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+      throw error;
+    }
   }
 
   async getById(req: Request, res: Response, _next: NextFunction): Promise<void> {
-    const { id } = req.params;
-    const draftWithItems = await this.draftRepository.findByIdWithLayoutItems(id);
+    const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
-    if (!draftWithItems) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Draft not found" } });
+    if (!id) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Draft ID is required" } });
       return;
     }
 
-    const { prisma } = await import("../../../infrastructure/prisma/client");
-    const draftData = await prisma.draft.findUnique({
-      where: { id },
-      include: {
-        layoutItems: {
-          include: {
-            images: {
-              take: 1,
-              include: {
-                uploadedImage: true,
-              },
-            },
-          },
-          orderBy: { layoutIndex: "asc" },
-        },
-      },
-    });
+    try {
+      const result = await this.getDraftById.execute({ draftId: id });
+      res.json({
+        ...result,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
+      });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
 
-    if (!draftData) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Draft not found" } });
-      return;
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
+        return;
+      }
+      throw error;
     }
-
-    res.json({
-      id: draftWithItems.draft.id,
-      status: draftWithItems.draft.state === "editing" ? "draft" : draftWithItems.draft.state,
-      productId: draftWithItems.draft.productId,
-      templateId: draftWithItems.draft.templateId,
-      layoutItems: draftData.layoutItems.map((item) => ({
-        id: item.id,
-        slotId: `slot-${item.layoutIndex}`,
-        imageId: item.images[0]?.uploadedImageId || null,
-      })),
-      createdAt: draftWithItems.draft.createdAt.toISOString(),
-      updatedAt: draftWithItems.draft.updatedAt.toISOString(),
-    });
   }
 
   async update(req: Request, res: Response, _next: NextFunction): Promise<void> {
-    const { id } = req.params;
-    const { layoutItems } = req.body as { layoutItems: Array<{ id: string; slotId: string; imageId: string | null }> };
+    const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
 
-    const draft = await this.draftRepository.findById(id);
-    if (!draft) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Draft not found" } });
+    if (!id) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Draft ID is required" } });
       return;
     }
 
-    const { prisma } = await import("../../../infrastructure/prisma/client");
+    const { layoutItems } = req.body as { layoutItems: Array<{ id: string; slotId: string; imageId: string | null }> };
 
     try {
-      await prisma.$transaction(async (tx) => {
-        for (const item of layoutItems) {
-          const layoutIndex = parseInt(item.slotId.replace("slot-", ""), 10);
-
-          const draftLayoutItem = await tx.draftLayoutItem.findFirst({
-            where: {
-              draftId: id,
-              layoutIndex,
-            },
-          });
-
-          if (!draftLayoutItem) {
-            continue;
-          }
-
-          await tx.draftLayoutItemImage.deleteMany({
-            where: {
-              draftLayoutItemId: draftLayoutItem.id,
-            },
-          });
-
-          if (item.imageId) {
-            await tx.draftLayoutItemImage.create({
-              data: {
-                draftLayoutItemId: draftLayoutItem.id,
-                uploadedImageId: item.imageId,
-                transformJson: null,
-              },
-            });
-          }
-        }
-
-        await tx.draft.update({
-          where: { id },
-          data: { updatedAt: new Date() },
-        });
+      const result = await this.updateDraft.execute({
+        draftId: id,
+        layoutItems,
       });
-
-      const updatedDraft = await this.draftRepository.findByIdWithLayoutItems(id);
-      if (!updatedDraft) {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Draft not found" } });
-        return;
-      }
-
-      const { prisma: prismaClient } = await import("../../../infrastructure/prisma/client");
-      const draftData = await prismaClient.draft.findUnique({
-        where: { id },
-        include: {
-          layoutItems: {
-            include: {
-              images: { take: 1 },
-            },
-            orderBy: { layoutIndex: "asc" },
-          },
-        },
-      });
-
-      if (!draftData) {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Draft not found" } });
-        return;
-      }
 
       res.json({
-        id: updatedDraft.draft.id,
-        status: updatedDraft.draft.state === "editing" ? "draft" : updatedDraft.draft.state,
-        productId: updatedDraft.draft.productId,
-        templateId: updatedDraft.draft.templateId,
-        layoutItems: draftData.layoutItems.map((item) => ({
-          id: item.id,
-          slotId: `slot-${item.layoutIndex}`,
-          imageId: item.images[0]?.uploadedImageId || null,
-        })),
-        createdAt: updatedDraft.draft.createdAt.toISOString(),
-        updatedAt: updatedDraft.draft.updatedAt.toISOString(),
+        ...result,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
       });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
+        return;
+      }
+
+      if (error instanceof ConflictError) {
+        res.status(409).json({ error: { code: "CONFLICT", message: error.message } });
+        return;
+      }
+
       console.error("Update error:", error);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update draft" } });
     }
   }
 
   async lock(req: Request, res: Response, _next: NextFunction): Promise<void> {
-    const { id } = req.params;
+    const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
+
+    if (!id) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Draft ID is required" } });
+      return;
+    }
 
     try {
-      const lockedDraft = await this.lockDraft.execute({ draftId: id });
+      await this.lockDraft.execute({ draftId: id });
+      const result = await this.getDraftById.execute({ draftId: id });
 
-      const { prisma } = await import("../../../infrastructure/prisma/client");
-      const draftData = await prisma.draft.findUnique({
-        where: { id },
-        include: {
-          layoutItems: {
-            include: {
-              images: { take: 1 },
-            },
-            orderBy: { layoutIndex: "asc" },
-          },
-        },
+      res.json({
+        ...result,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
+        lockedAt: result.updatedAt.toISOString(),
       });
-
-      if (!draftData) {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Draft not found" } });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
         return;
       }
 
-      res.json({
-        id: lockedDraft.id,
-        status: lockedDraft.state === "editing" ? "draft" : lockedDraft.state,
-        productId: lockedDraft.productId,
-        templateId: lockedDraft.templateId,
-        layoutItems: draftData.layoutItems.map((item) => ({
-          id: item.id,
-          slotId: `slot-${item.layoutIndex}`,
-          imageId: item.images[0]?.uploadedImageId || null,
-        })),
-        createdAt: lockedDraft.createdAt.toISOString(),
-        updatedAt: lockedDraft.updatedAt.toISOString(),
-        lockedAt: lockedDraft.updatedAt.toISOString(),
-      });
-    } catch (error) {
       if (error instanceof NotFoundError) {
         res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
         return;
       }
 
-      if (error instanceof Error && error.message.includes("Cannot lock")) {
-        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message } });
+      if (error instanceof ConflictError) {
+        res.status(409).json({ error: { code: "CONFLICT", message: error.message } });
         return;
       }
 

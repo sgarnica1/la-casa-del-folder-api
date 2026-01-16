@@ -1,38 +1,34 @@
 import { Request, Response, NextFunction } from "express";
-import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
+import { GetLayoutByTemplateId } from "../../../application/use-cases/layouts/GetLayoutByTemplateId";
+import { NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
 
 export class LayoutController {
-  constructor(private productTemplateRepository: ProductTemplateRepository) { }
+  constructor(private getLayoutByTemplateId: GetLayoutByTemplateId) { }
 
   async getByTemplateId(req: Request, res: Response, _next: NextFunction): Promise<void> {
-    const { templateId } = req.params;
+    const templateId = typeof req.params.templateId === "string" ? req.params.templateId : req.params.templateId?.[0];
 
-    let actualTemplateId = templateId;
-    if (templateId === "calendar-template") {
-      actualTemplateId = "00000000-0000-0000-0000-000000000003";
-    }
-
-    const layoutItems = await this.productTemplateRepository.findLayoutItemsByTemplateId(actualTemplateId);
-
-    if (layoutItems.length === 0) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Layout not found" } });
+    if (!templateId) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Template ID is required" } });
       return;
     }
 
-    res.json({
-      id: `layout-${actualTemplateId}`,
-      templateId: actualTemplateId,
-      slots: layoutItems.map((item) => ({
-        id: `slot-${item.layoutIndex}`,
-        name: `Slot ${item.layoutIndex}`,
-        required: item.editable,
-        bounds: {
-          x: 0,
-          y: 0,
-          width: 100,
-          height: 100,
-        },
-      })),
-    });
+    try {
+      const result = await this.getLayoutByTemplateId.execute({ templateId });
+      res.json(result);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
+        return;
+      }
+
+      console.error("Get layout error:", error);
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get layout" } });
+    }
   }
 }
