@@ -28,12 +28,17 @@ export class GetLayoutByTemplateId {
       throw new NotFoundError("Layout", actualTemplateId);
     }
 
-    return {
-      id: `layout-${actualTemplateId}`,
-      templateId: actualTemplateId,
-      slots: layoutItems.map((item) => ({
+    const slots = layoutItems.map((item) => {
+      let slotName: string;
+      if (item.layoutIndex === 0) {
+        slotName = 'Portada';
+      } else {
+        slotName = `Mes ${item.layoutIndex}`;
+      }
+
+      return {
         id: `slot-${item.layoutIndex}`,
-        name: `Slot ${item.layoutIndex}`,
+        name: slotName,
         required: item.editable,
         bounds: {
           x: 0,
@@ -41,7 +46,13 @@ export class GetLayoutByTemplateId {
           width: 100,
           height: 100,
         },
-      })),
+      };
+    });
+
+    return {
+      id: `layout-${actualTemplateId}`,
+      templateId: actualTemplateId,
+      slots,
     };
   }
 }

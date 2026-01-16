@@ -11,6 +11,7 @@ export const GetDraftByIdOutputSchema = z.object({
   status: z.string(),
   productId: z.uuid(),
   templateId: z.uuid(),
+  title: z.string().nullable().optional(),
   layoutItems: z.array(
     z.object({
       id: z.uuid(),

@@ -28,6 +28,7 @@ export class GetDraftById {
       status: draftWithItems.draft.state === "editing" ? "draft" : draftWithItems.draft.state,
       productId: draftWithItems.draft.productId,
       templateId: draftWithItems.draft.templateId,
+      title: draftWithItems.draft.title || null,
       layoutItems: draftWithItems.layoutItems.map((item) => ({
         id: item.id,
         slotId: `slot-${item.layoutIndex}`,

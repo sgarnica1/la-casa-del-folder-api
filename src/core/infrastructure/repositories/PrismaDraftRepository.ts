@@ -155,6 +155,7 @@ export class PrismaDraftRepository implements DraftRepository {
           ...(updates.productId !== undefined && { productId: updates.productId }),
           ...(updates.templateId !== undefined && { templateId: updates.templateId }),
           ...(updates.state !== undefined && { status: updates.state as "editing" | "locked" | "ordered" }),
+          ...(updates.title !== undefined && { title: updates.title }),
         },
       });
 
@@ -164,6 +165,7 @@ export class PrismaDraftRepository implements DraftRepository {
         productId: updated.productId,
         templateId: updated.templateId!,
         state: updated.status as DraftStateEnum,
+        title: updated.title || undefined,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
       };
@@ -198,6 +200,7 @@ export class PrismaDraftRepository implements DraftRepository {
         productId: draft.productId,
         templateId: draft.templateId!,
         state: draft.status as DraftStateEnum,
+        title: draft.title || undefined,
         createdAt: draft.createdAt,
         updatedAt: draft.updatedAt,
       },
