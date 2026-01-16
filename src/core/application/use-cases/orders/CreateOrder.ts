@@ -2,7 +2,7 @@ import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { ProductRepository } from "../../../domain/repositories/ProductRepository";
 import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
-import { DraftState } from "../../../domain/entities/Draft";
+import { DraftStateEnum } from "../../../domain/entities/Draft";
 import {
   NotFoundError,
   ConflictError,
@@ -36,8 +36,8 @@ export class CreateOrder {
       throw new NotFoundError("Draft", validatedInput.draftId);
     }
 
-    if (draftWithItems.draft.state !== DraftState.LOCKED) {
-      if (draftWithItems.draft.state === DraftState.ORDERED) {
+    if (draftWithItems.draft.state !== DraftStateEnum.LOCKED) {
+      if (draftWithItems.draft.state === DraftStateEnum.ORDERED) {
         throw new ConflictError("Draft already converted to order");
       }
       throw new ConflictError("Draft must be locked before creating an order");
@@ -95,10 +95,8 @@ export class CreateOrder {
       })),
     };
 
-    const SEEDED_USER_ID = "00000000-0000-0000-0000-000000000000";
-
     const order = await this.deps.orderRepository.createWithDraftUpdate({
-      userId: SEEDED_USER_ID,
+      userId: draftWithItems.draft.userId,
       draftId: validatedInput.draftId,
       totalAmount: product.basePrice,
       productName: product.name,

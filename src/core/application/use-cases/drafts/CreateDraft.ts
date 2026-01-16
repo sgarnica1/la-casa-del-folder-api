@@ -1,7 +1,7 @@
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { ProductRepository } from "../../../domain/repositories/ProductRepository";
 import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
-import { DraftState } from "../../../domain/entities/Draft";
+import { DraftStateEnum } from "../../../domain/entities/Draft";
 import { NotFoundError, ValidationError } from "../../../domain/errors";
 import { CreateDraftInputSchema, CreateDraftOutput } from "./dtos/CreateDraft.dto";
 
@@ -39,7 +39,7 @@ export class CreateDraft {
         userId: validatedInput.userId,
         productId: product.id,
         templateId: template.id,
-        state: DraftState.EDITING,
+        state: DraftStateEnum.EDITING,
       },
       layoutItems: templateLayoutItems.map((item) => ({
         layoutIndex: item.layoutIndex,

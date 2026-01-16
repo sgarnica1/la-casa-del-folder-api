@@ -1,9 +1,8 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { UploadImage } from "../../../application/use-cases/assets/UploadImage";
 import { GetImagesByIds } from "../../../application/use-cases/assets/GetImagesByIds";
 import { ValidationError, NotFoundError } from "../../../domain/errors/DomainErrors";
-
-export const SEEDED_USER_ID = "00000000-0000-0000-0000-000000000000";
+import type { AuthRequest } from "../middleware/authMiddleware";
 
 export class AssetController {
   constructor(
@@ -11,7 +10,12 @@ export class AssetController {
     private getImagesByIds: GetImagesByIds
   ) { }
 
-  async upload(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async upload(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+    if (!req.userAuth) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      return;
+    }
+
     const file = req.file;
 
     if (!file) {
@@ -21,7 +25,7 @@ export class AssetController {
 
     try {
       const result = await this.uploadImage.execute({
-        userId: SEEDED_USER_ID,
+        userId: req.userAuth.userId,
         file: {
           buffer: file.buffer,
           mimetype: file.mimetype,
@@ -43,7 +47,7 @@ export class AssetController {
     }
   }
 
-  async getByIds(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  async getByIds(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     const { ids } = req.query;
 
     if (!ids || typeof ids !== "string") {

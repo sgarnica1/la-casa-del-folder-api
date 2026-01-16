@@ -3,6 +3,7 @@ import { AssetController } from "./AssetController";
 import { OrderController } from "./OrderController";
 import { HealthController } from "./HealthController";
 import { LayoutController } from "./LayoutController";
+import { UserController } from "./UserController";
 
 export interface Controllers {
   draftController: DraftController;
@@ -10,4 +11,5 @@ export interface Controllers {
   orderController: OrderController;
   healthController: HealthController;
   layoutController: LayoutController;
+  userController: UserController;
 }

@@ -1,5 +1,5 @@
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
-import { DraftState } from "../../../domain/entities/Draft";
+import { DraftStateEnum } from "../../../domain/entities/Draft";
 import { ConflictError, NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
 import { LockDraftInputSchema, LockDraftOutput } from "./dtos/LockDraft.dto";
 
@@ -24,7 +24,7 @@ export class LockDraft {
       throw new NotFoundError("Draft", validatedInput.draftId);
     }
 
-    if (draft.state === DraftState.LOCKED) {
+    if (draft.state === DraftStateEnum.LOCKED) {
       return {
         id: draft.id,
         userId: draft.userId,
@@ -36,12 +36,12 @@ export class LockDraft {
       };
     }
 
-    if (draft.state === DraftState.ORDERED) {
+    if (draft.state === DraftStateEnum.ORDERED) {
       throw new ConflictError("Cannot lock an already ordered draft");
     }
 
     const updatedDraft = await this.deps.draftRepository.update(validatedInput.draftId, {
-      state: DraftState.LOCKED,
+      state: DraftStateEnum.LOCKED,
     });
 
     return {

@@ -3,6 +3,7 @@ import { AssetController } from "./interface/http/controllers/AssetController";
 import { OrderController } from "./interface/http/controllers/OrderController";
 import { HealthController } from "./interface/http/controllers/HealthController";
 import { LayoutController } from "./interface/http/controllers/LayoutController";
+import { UserController } from "./interface/http/controllers/UserController";
 import type { Controllers } from "./interface/http/controllers";
 import { CreateDraft } from "./application/use-cases/drafts/CreateDraft";
 import { GetDraftById } from "./application/use-cases/drafts/GetDraftById";
@@ -20,6 +21,8 @@ import { PrismaUploadedImageRepository } from "./infrastructure/repositories/Pri
 import { PrismaOrderRepository } from "./infrastructure/repositories/PrismaOrderRepository";
 import { PrismaProductRepository } from "./infrastructure/repositories/PrismaProductRepository";
 import { PrismaProductTemplateRepository } from "./infrastructure/repositories/PrismaProductTemplateRepository";
+import { PrismaUserRepository } from "./infrastructure/repositories/PrismaUserRepository";
+import { PrismaRoleRepository } from "./infrastructure/repositories/PrismaRoleRepository";
 
 class Container {
   private _draftRepository: PrismaDraftRepository | null = null;
@@ -28,6 +31,8 @@ class Container {
   private _orderRepository: PrismaOrderRepository | null = null;
   private _productRepository: PrismaProductRepository | null = null;
   private _productTemplateRepository: PrismaProductTemplateRepository | null = null;
+  private _userRepository: PrismaUserRepository | null = null;
+  private _roleRepository: PrismaRoleRepository | null = null;
 
   private _createDraft: CreateDraft | null = null;
   private _getDraftById: GetDraftById | null = null;
@@ -45,6 +50,7 @@ class Container {
   private _orderController: OrderController | null = null;
   private _healthController: HealthController | null = null;
   private _layoutController: LayoutController | null = null;
+  private _userController: UserController | null = null;
 
   get draftRepository(): PrismaDraftRepository {
     if (!this._draftRepository) {
@@ -86,6 +92,20 @@ class Container {
       this._productTemplateRepository = new PrismaProductTemplateRepository();
     }
     return this._productTemplateRepository;
+  }
+
+  get userRepository(): PrismaUserRepository {
+    if (!this._userRepository) {
+      this._userRepository = new PrismaUserRepository();
+    }
+    return this._userRepository;
+  }
+
+  get roleRepository(): PrismaRoleRepository {
+    if (!this._roleRepository) {
+      this._roleRepository = new PrismaRoleRepository();
+    }
+    return this._roleRepository;
   }
 
   get createDraft(): CreateDraft {
@@ -231,6 +251,13 @@ class Container {
     return this._layoutController;
   }
 
+  get userController(): UserController {
+    if (!this._userController) {
+      this._userController = new UserController();
+    }
+    return this._userController;
+  }
+
   get controllers(): Controllers {
     return {
       draftController: this.draftController,
@@ -238,6 +265,20 @@ class Container {
       orderController: this.orderController,
       healthController: this.healthController,
       layoutController: this.layoutController,
+      userController: this.userController,
+    };
+  }
+
+  get repositories() {
+    return {
+      userRepository: this.userRepository,
+      draftRepository: this.draftRepository,
+      orderRepository: this.orderRepository,
+      productRepository: this.productRepository,
+      productTemplateRepository: this.productTemplateRepository,
+      uploadedImageRepository: this.uploadedImageRepository,
+      assetRepository: this.assetRepository,
+      roleRepository: this.roleRepository,
     };
   }
 }

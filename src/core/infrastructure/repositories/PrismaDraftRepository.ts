@@ -1,5 +1,5 @@
 import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems, DraftWithLayoutItemsAndImages, UpdateLayoutItemsInput, DraftWithImagesForOrder } from "../../domain/repositories/DraftRepository";
-import { Draft, DraftState } from "../../domain/entities/Draft";
+import { Draft, DraftStateEnum } from "../../domain/entities/Draft";
 import { DraftLayoutItem } from "../../domain/entities/DraftLayoutItem";
 import { prisma } from "../prisma/client";
 import { mapPrismaError } from "../errors/PrismaErrorMapper";
@@ -23,7 +23,7 @@ export class PrismaDraftRepository implements DraftRepository {
         userId: created.userId,
         productId: created.productId,
         templateId: created.templateId!,
-        state: created.status as DraftState,
+        state: created.status as DraftStateEnum,
         createdAt: created.createdAt,
         updatedAt: created.updatedAt,
       };
@@ -66,7 +66,7 @@ export class PrismaDraftRepository implements DraftRepository {
           userId: result.draft.userId,
           productId: result.draft.productId,
           templateId: result.draft.templateId!,
-          state: result.draft.status as DraftState,
+          state: result.draft.status as DraftStateEnum,
           createdAt: result.draft.createdAt,
           updatedAt: result.draft.updatedAt,
         },
@@ -99,7 +99,7 @@ export class PrismaDraftRepository implements DraftRepository {
       userId: draft.userId,
       productId: draft.productId,
       templateId: draft.templateId!,
-      state: draft.status as DraftState,
+      state: draft.status as DraftStateEnum,
       createdAt: draft.createdAt,
       updatedAt: draft.updatedAt,
     };
@@ -130,7 +130,7 @@ export class PrismaDraftRepository implements DraftRepository {
         userId: draft.userId,
         productId: draft.productId,
         templateId: draft.templateId!,
-        state: draft.status as DraftState,
+        state: draft.status as DraftStateEnum,
         createdAt: draft.createdAt,
         updatedAt: draft.updatedAt,
       },
@@ -163,7 +163,7 @@ export class PrismaDraftRepository implements DraftRepository {
         userId: updated.userId,
         productId: updated.productId,
         templateId: updated.templateId!,
-        state: updated.status as DraftState,
+        state: updated.status as DraftStateEnum,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
       };
@@ -197,7 +197,7 @@ export class PrismaDraftRepository implements DraftRepository {
         userId: draft.userId,
         productId: draft.productId,
         templateId: draft.templateId!,
-        state: draft.status as DraftState,
+        state: draft.status as DraftStateEnum,
         createdAt: draft.createdAt,
         updatedAt: draft.updatedAt,
       },
@@ -274,7 +274,7 @@ export class PrismaDraftRepository implements DraftRepository {
           userId: result.userId,
           productId: result.productId,
           templateId: result.templateId!,
-          state: result.status as DraftState,
+          state: result.status as DraftStateEnum,
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
         },
