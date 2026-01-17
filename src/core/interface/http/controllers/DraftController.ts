@@ -129,12 +129,16 @@ export class DraftController {
       return;
     }
 
-    const { layoutItems } = req.body as { layoutItems: Array<{ id: string; slotId: string; imageId: string | null }> };
+    const { layoutItems, title } = req.body as {
+      layoutItems?: Array<{ id: string; slotId: string; imageId: string | null }>;
+      title?: string;
+    };
 
     try {
       const result = await this.updateDraft.execute({
         draftId: id,
-        layoutItems,
+        ...(title !== undefined && { title }),
+        ...(layoutItems && { layoutItems }),
       });
 
       res.json({
