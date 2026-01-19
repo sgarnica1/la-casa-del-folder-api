@@ -116,6 +116,27 @@ async function main() {
     aspect_ratio: '4:5',
   };
 
+  // Cover slot (layoutIndex: 0)
+  const coverLayoutItemId = '00000000-0000-0000-0000-000000000009';
+  await prisma.templateLayoutItem.upsert({
+    where: { id: coverLayoutItemId },
+    update: {},
+    create: {
+      id: coverLayoutItemId,
+      templateId: template.id,
+      layoutIndex: 0,
+      type: 'image',
+      editable: true,
+      constraintsJson: {
+        max_images: 1,
+        aspect_ratio: '3:4',
+      },
+      createdAt: SEED_TIMESTAMP,
+      updatedAt: SEED_TIMESTAMP,
+    },
+  });
+
+  // Month slots (layoutIndex: 1-12)
   const layoutItemIds = [
     '00000000-0000-0000-0000-000000000010',
     '00000000-0000-0000-0000-000000000011',

@@ -55,6 +55,8 @@ model User {
   id        String   @id @default(uuid())
   clerkId   String   @unique @map("clerk_id")
   email     String
+  firstName String?  @map("first_name")
+  lastName  String?  @map("last_name")
   roleId    String   @map("role_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -216,7 +218,7 @@ model Draft {
   userId    String      @map("user_id")
   productId String      @map("product_id")
   templateId String?    @map("template_id")
-  title     String?
+  title     String?     @db.VarChar(60)
   status    DraftStatus
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")

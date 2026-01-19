@@ -62,18 +62,27 @@ export class OrderController {
     }
   }
 
-  async getAll(_req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+  async getAll(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
     try {
-      const result = await this.getAllOrders.execute();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
 
-      res.status(200).json(
-        result.map((order) => ({
+      const result = await this.getAllOrders.execute({ page, limit });
+
+      res.status(200).json({
+        ...result,
+        data: result.data.map((order) => ({
           ...order,
           createdAt: order.createdAt.toISOString(),
           updatedAt: order.updatedAt.toISOString(),
-        }))
-      );
+        })),
+      });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
       console.error("Get all orders error:", error);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get orders" } });
     }

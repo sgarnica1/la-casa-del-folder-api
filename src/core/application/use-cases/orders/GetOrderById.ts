@@ -32,6 +32,8 @@ export class GetOrderById {
       shippingAddressJson: order.shippingAddressJson,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+      customer: order.customer,
+      address: order.address,
       items: order.items.map((item) => ({
         id: item.id,
         productNameSnapshot: item.productNameSnapshot,

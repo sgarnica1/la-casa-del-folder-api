@@ -8,6 +8,18 @@ import {
 } from "../../domain/errors/DomainErrors";
 
 export function mapPrismaError(error: unknown): BaseError {
+  if (error instanceof Error) {
+    const errorMessage = error.message.toLowerCase();
+    if (
+      errorMessage.includes("only image files are allowed") ||
+      errorMessage.includes("file type") ||
+      errorMessage.includes("invalid file") ||
+      errorMessage.includes("unsupported file")
+    ) {
+      return new ValidationError("Tipo de archivo inválido. Solo se permiten archivos de imagen.");
+    }
+  }
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     switch (error.code) {
       case "P2002": {
@@ -21,19 +33,19 @@ export function mapPrismaError(error: unknown): BaseError {
 
       case "P2003": {
         const fieldName = error.meta?.field_name as string | undefined;
-        
+
         if (fieldName?.includes("user_id")) {
           return new NotFoundError("User", undefined);
         }
-        
+
         if (fieldName?.includes("product_id")) {
           return new NotFoundError("Product", undefined);
         }
-        
+
         if (fieldName?.includes("template_id")) {
           return new NotFoundError("ProductTemplate", undefined);
         }
-        
+
         return new ValidationError(
           `Foreign key constraint violation on ${fieldName || "related record"}`,
           { fieldName }

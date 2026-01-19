@@ -24,18 +24,35 @@ export class UpdateDraft {
     const validatedInput = validationResult.data;
     await this.draftMutationPolicy.assertEditable(validatedInput.draftId);
 
-    const result = await this.deps.draftRepository.updateLayoutItems(validatedInput.draftId, {
-      layoutItems: validatedInput.layoutItems.map((item) => ({
-        slotId: item.slotId,
-        imageId: item.imageId,
-      })),
-    });
+    // Update title if provided
+    if (validatedInput.title !== undefined) {
+      await this.deps.draftRepository.update(validatedInput.draftId, {
+        title: validatedInput.title,
+      });
+    }
+
+    // Update layout items if provided
+    let result;
+    if (validatedInput.layoutItems) {
+      result = await this.deps.draftRepository.updateLayoutItems(validatedInput.draftId, {
+        layoutItems: validatedInput.layoutItems.map((item) => ({
+          slotId: item.slotId,
+          imageId: item.imageId,
+        })),
+      });
+    } else {
+      result = await this.deps.draftRepository.findByIdWithLayoutItemsAndImages(validatedInput.draftId);
+      if (!result) {
+        throw new ValidationError("Draft not found", { issues: [] });
+      }
+    }
 
     return {
       id: result.draft.id,
       status: result.draft.state === "editing" ? "draft" : result.draft.state,
       productId: result.draft.productId,
       templateId: result.draft.templateId,
+      title: result.draft.title || null,
       layoutItems: result.layoutItems.map((item) => ({
         id: item.id,
         slotId: `slot-${item.layoutIndex}`,

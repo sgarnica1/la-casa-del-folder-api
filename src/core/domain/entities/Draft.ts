@@ -12,6 +12,7 @@ export interface Draft {
   productId: string;
   templateId: string;
   state: DraftState;
+  title?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

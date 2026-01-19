@@ -1,4 +1,4 @@
-import { OrderRepository } from "../../domain/repositories/OrderRepository";
+import { OrderRepository, OrderListSummary } from "../../domain/repositories/OrderRepository";
 import { OrderWithItems, CreateOrderInput } from "../../application/use-cases/orders/dtos/OrderRepository.dto";
 import { Order, OrderState } from "../../domain/entities/Order";
 import { prisma } from "../prisma/client";
@@ -74,32 +74,139 @@ export class PrismaOrderRepository implements OrderRepository {
     const orders = await prisma.order.findMany({
       include: {
         items: true,
+        user: {
+          include: {
+            addresses: {
+              where: { isDefault: true },
+              take: 1,
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    return orders.map((order) => ({
-      id: order.id,
-      userId: order.userId,
-      totalAmount: Number(order.totalAmount),
-      paymentStatus: order.paymentStatus,
-      orderStatus: order.orderStatus,
-      shippingAddressJson: order.shippingAddressJson as Record<string, unknown>,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-      items: order.items.map((item) => ({
-        id: item.id,
-        productNameSnapshot: item.productNameSnapshot,
-        variantNameSnapshot: item.variantNameSnapshot,
-        quantity: item.quantity,
-        priceSnapshot: Number(item.priceSnapshot),
-        designSnapshotJson: item.designSnapshotJson as Record<string, unknown>,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-      })),
-    }));
+    return orders.map((order) => {
+      const defaultAddress = order.user.addresses[0] || null;
+
+      return {
+        id: order.id,
+        userId: order.userId,
+        totalAmount: Number(order.totalAmount),
+        paymentStatus: order.paymentStatus,
+        orderStatus: order.orderStatus,
+        shippingAddressJson: order.shippingAddressJson as Record<string, unknown>,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        customer: {
+          id: order.user.id,
+          email: order.user.email,
+          firstName: order.user.firstName,
+          lastName: order.user.lastName,
+        },
+        address: defaultAddress ? {
+          name: defaultAddress.name,
+          phone: defaultAddress.phone,
+          addressLine1: defaultAddress.addressLine1,
+          addressLine2: defaultAddress.addressLine2,
+          city: defaultAddress.city,
+          state: defaultAddress.state,
+          postalCode: defaultAddress.postalCode,
+          country: defaultAddress.country,
+        } : null,
+        items: order.items.map((item) => ({
+          id: item.id,
+          productNameSnapshot: item.productNameSnapshot,
+          variantNameSnapshot: item.variantNameSnapshot,
+          quantity: item.quantity,
+          priceSnapshot: Number(item.priceSnapshot),
+          designSnapshotJson: item.designSnapshotJson as Record<string, unknown>,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        })),
+      };
+    });
+  }
+
+  async findPaginated(params: { page: number; limit: number }): Promise<{
+    data: OrderWithItems[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const skip = (params.page - 1) * params.limit;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        include: {
+          items: true,
+          user: {
+            include: {
+              addresses: {
+                where: { isDefault: true },
+                take: 1,
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: params.limit,
+      }),
+      prisma.order.count(),
+    ]);
+
+    return {
+      data: orders.map((order) => {
+        const defaultAddress = order.user.addresses[0] || null;
+
+        return {
+          id: order.id,
+          userId: order.userId,
+          totalAmount: Number(order.totalAmount),
+          paymentStatus: order.paymentStatus,
+          orderStatus: order.orderStatus,
+          shippingAddressJson: order.shippingAddressJson as Record<string, unknown>,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          customer: {
+            id: order.user.id,
+            email: order.user.email,
+            firstName: order.user.firstName,
+            lastName: order.user.lastName,
+          },
+          address: defaultAddress ? {
+            name: defaultAddress.name,
+            phone: defaultAddress.phone,
+            addressLine1: defaultAddress.addressLine1,
+            addressLine2: defaultAddress.addressLine2,
+            city: defaultAddress.city,
+            state: defaultAddress.state,
+            postalCode: defaultAddress.postalCode,
+            country: defaultAddress.country,
+          } : null,
+          items: order.items.map((item) => ({
+            id: item.id,
+            productNameSnapshot: item.productNameSnapshot,
+            variantNameSnapshot: item.variantNameSnapshot,
+            quantity: item.quantity,
+            priceSnapshot: Number(item.priceSnapshot),
+            designSnapshotJson: item.designSnapshotJson as Record<string, unknown>,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          })),
+        };
+      }),
+      total,
+      page: params.page,
+      limit: params.limit,
+      totalPages: Math.ceil(total / params.limit),
+    };
   }
 
   async findById(id: string): Promise<OrderWithItems | null> {
@@ -107,12 +214,22 @@ export class PrismaOrderRepository implements OrderRepository {
       where: { id },
       include: {
         items: true,
+        user: {
+          include: {
+            addresses: {
+              where: { isDefault: true },
+              take: 1,
+            },
+          },
+        },
       },
     });
 
     if (!prismaOrder) {
       return null;
     }
+
+    const defaultAddress = prismaOrder.user.addresses[0] || null;
 
     return {
       id: prismaOrder.id,
@@ -123,6 +240,120 @@ export class PrismaOrderRepository implements OrderRepository {
       shippingAddressJson: prismaOrder.shippingAddressJson as Record<string, unknown>,
       createdAt: prismaOrder.createdAt,
       updatedAt: prismaOrder.updatedAt,
+      customer: {
+        id: prismaOrder.user.id,
+        email: prismaOrder.user.email,
+        firstName: prismaOrder.user.firstName,
+        lastName: prismaOrder.user.lastName,
+      },
+      address: defaultAddress ? {
+        name: defaultAddress.name,
+        phone: defaultAddress.phone,
+        addressLine1: defaultAddress.addressLine1,
+        addressLine2: defaultAddress.addressLine2,
+        city: defaultAddress.city,
+        state: defaultAddress.state,
+        postalCode: defaultAddress.postalCode,
+        country: defaultAddress.country,
+      } : null,
+      items: prismaOrder.items.map((item) => ({
+        id: item.id,
+        productNameSnapshot: item.productNameSnapshot,
+        variantNameSnapshot: item.variantNameSnapshot,
+        quantity: item.quantity,
+        priceSnapshot: Number(item.priceSnapshot),
+        designSnapshotJson: item.designSnapshotJson as Record<string, unknown>,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+    };
+  }
+
+  async findOrdersByUser(userId: string): Promise<OrderListSummary[]> {
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: {
+          take: 1,
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    return orders.map((order) => {
+      const firstItem = order.items[0];
+      const snapshot = firstItem?.designSnapshotJson as {
+        title?: string | null;
+        layoutItems?: Array<{
+          layoutIndex: number;
+          images?: Array<{ secureUrl?: string }>;
+        }>;
+      } | null;
+
+      const title = snapshot?.title || null;
+
+      const coverItem = snapshot?.layoutItems?.find((item) => item.layoutIndex === 0);
+      const coverUrl = coverItem?.images?.[0]?.secureUrl || null;
+
+      return {
+        id: order.id,
+        status: order.orderStatus,
+        total: Number(order.totalAmount),
+        createdAt: order.createdAt,
+        title,
+        coverUrl,
+      };
+    });
+  }
+
+  async findOrderByIdAndUser(id: string, userId: string): Promise<OrderWithItems | null> {
+    const prismaOrder = await prisma.order.findFirst({
+      where: { id, userId },
+      include: {
+        items: true,
+        user: {
+          include: {
+            addresses: {
+              where: { isDefault: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    if (!prismaOrder) {
+      return null;
+    }
+
+    const defaultAddress = prismaOrder.user.addresses[0] || null;
+
+    return {
+      id: prismaOrder.id,
+      userId: prismaOrder.userId,
+      totalAmount: Number(prismaOrder.totalAmount),
+      paymentStatus: prismaOrder.paymentStatus,
+      orderStatus: prismaOrder.orderStatus,
+      shippingAddressJson: prismaOrder.shippingAddressJson as Record<string, unknown>,
+      createdAt: prismaOrder.createdAt,
+      updatedAt: prismaOrder.updatedAt,
+      customer: {
+        id: prismaOrder.user.id,
+        email: prismaOrder.user.email,
+        firstName: prismaOrder.user.firstName,
+        lastName: prismaOrder.user.lastName,
+      },
+      address: defaultAddress ? {
+        name: defaultAddress.name,
+        phone: defaultAddress.phone,
+        addressLine1: defaultAddress.addressLine1,
+        addressLine2: defaultAddress.addressLine2,
+        city: defaultAddress.city,
+        state: defaultAddress.state,
+        postalCode: defaultAddress.postalCode,
+        country: defaultAddress.country,
+      } : null,
       items: prismaOrder.items.map((item) => ({
         id: item.id,
         productNameSnapshot: item.productNameSnapshot,

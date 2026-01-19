@@ -6,6 +6,28 @@ export const GetOrderByIdInputSchema = z.object({
 
 export type GetOrderByIdInput = z.infer<typeof GetOrderByIdInputSchema>;
 
+export const OrderCustomerSchema = z.object({
+  id: z.uuid(),
+  email: z.string(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+});
+
+export type OrderCustomer = z.infer<typeof OrderCustomerSchema>;
+
+export const OrderAddressSchema = z.object({
+  name: z.string(),
+  phone: z.string().nullable(),
+  addressLine1: z.string(),
+  addressLine2: z.string().nullable(),
+  city: z.string(),
+  state: z.string(),
+  postalCode: z.string(),
+  country: z.string(),
+});
+
+export type OrderAddress = z.infer<typeof OrderAddressSchema>;
+
 export const GetOrderByIdOutputSchema = z.object({
   id: z.uuid(),
   userId: z.uuid(),
@@ -15,6 +37,8 @@ export const GetOrderByIdOutputSchema = z.object({
   shippingAddressJson: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   updatedAt: z.date(),
+  customer: OrderCustomerSchema,
+  address: OrderAddressSchema.nullable(),
   items: z.array(
     z.object({
       id: z.uuid(),
