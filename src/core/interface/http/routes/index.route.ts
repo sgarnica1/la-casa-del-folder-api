@@ -7,6 +7,7 @@ import { createAssetRoutes } from "./assets.routes";
 import { createOrderRoutes } from "./orders.routes";
 import { createHealthRoutes } from "./health.routes";
 import { createLayoutRoutes } from "./layouts.routes";
+import { createMeRoutes } from "./me.routes";
 import { createUserProvisioningMiddleware } from "../middleware/authMiddleware";
 import { UnauthorizedError } from "../../../domain/errors/DomainErrors";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -30,6 +31,7 @@ export function createRoutes(controllers: Controllers, repositories: Repositorie
   router.use("/orders", requireAuthApi, userProvisioningMiddleware, createOrderRoutes(controllers.orderController, repositories.draftRepository));
   router.use("/layouts", createLayoutRoutes(controllers.layoutController));
   router.get("/user/me", requireAuthApi, userProvisioningMiddleware, asyncHandler((req, res, next) => controllers.userController.getCurrentUser(req, res, next)));
+  router.use("/user/me", requireAuthApi, userProvisioningMiddleware, createMeRoutes(controllers.meDraftController, controllers.meOrderController));
 
   return router;
 }

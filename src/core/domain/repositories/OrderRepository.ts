@@ -1,9 +1,26 @@
 import { Order } from "../entities/Order";
-import { OrderWithItems, CreateOrderInput } from "../../application/use-cases/orders/dtos/OrderRepository.dto";
+import type {
+  OrderWithItems,
+  CreateOrderInput,
+  PaginationParams,
+  PaginatedResult,
+  OrderListSummary,
+} from "../../application/use-cases/orders/dtos/OrderRepository.dto";
 
 export interface OrderRepository {
   create(order: Omit<Order, "createdAt">): Promise<Order>;
   createWithDraftUpdate(input: CreateOrderInput): Promise<Order>;
   findAll(): Promise<OrderWithItems[]>;
+  findPaginated(params: PaginationParams): Promise<PaginatedResult<OrderWithItems>>;
   findById(id: string): Promise<OrderWithItems | null>;
+  findOrdersByUser(userId: string): Promise<OrderListSummary[]>;
+  findOrderByIdAndUser(id: string, userId: string): Promise<OrderWithItems | null>;
 }
+
+export type {
+  OrderWithItems,
+  CreateOrderInput,
+  PaginationParams,
+  PaginatedResult,
+  OrderListSummary,
+} from "../../application/use-cases/orders/dtos/OrderRepository.dto";

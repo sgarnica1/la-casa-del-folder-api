@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const UpdateDraftInputSchema = z.object({
   draftId: z.uuid(),
-  title: z.string().optional(),
+  title: z.string().max(60, "El título no puede exceder 60 caracteres").optional(),
   layoutItems: z.array(
     z.object({
       id: z.uuid(),

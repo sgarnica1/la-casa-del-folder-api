@@ -1,56 +1,12 @@
 import { Draft } from "../entities/Draft";
-import { DraftLayoutItem } from "../entities/DraftLayoutItem";
-
-export interface CreateDraftWithLayoutItemsInput {
-  draft: Omit<Draft, "id" | "createdAt" | "updatedAt">;
-  layoutItems: Omit<DraftLayoutItem, "id" | "draftId" | "createdAt" | "updatedAt">[];
-}
-
-export interface DraftWithLayoutItems {
-  draft: Draft;
-  layoutItems: DraftLayoutItem[];
-}
-
-export interface DraftLayoutItemWithImage {
-  id: string;
-  layoutIndex: number;
-  imageId: string | null;
-}
-
-export interface DraftWithLayoutItemsAndImages {
-  draft: Draft;
-  layoutItems: DraftLayoutItemWithImage[];
-}
-
-export interface UpdateLayoutItemsInput {
-  layoutItems: Array<{ slotId: string; imageId: string | null }>;
-}
-
-export interface DraftWithImagesForOrder {
-  layoutItems: Array<{
-    layoutIndex: number;
-    type: string;
-    transformJson: Record<string, unknown> | null;
-    images: Array<{
-      uploadedImageId: string;
-      transformJson: Record<string, unknown> | null;
-      uploadedImage: {
-        cloudinaryPublicId: string;
-        originalUrl: string;
-        width: number;
-        height: number;
-      };
-    }>;
-  }>;
-}
-
-export interface CreateOrderWithDraftUpdateInput {
-  userId: string;
-  draftId: string;
-  totalAmount: number;
-  productName: string;
-  designSnapshot: Record<string, unknown>;
-}
+import type {
+  CreateDraftWithLayoutItemsInput,
+  DraftWithLayoutItems,
+  DraftWithLayoutItemsAndImages,
+  UpdateLayoutItemsInput,
+  DraftWithImagesForOrder,
+  DraftListSummary,
+} from "../../application/use-cases/drafts/dtos/DraftRepository.dto";
 
 export interface DraftRepository {
   create(draft: Omit<Draft, "createdAt" | "updatedAt">): Promise<Draft>;
@@ -62,4 +18,16 @@ export interface DraftRepository {
   update(id: string, updates: Partial<Draft>): Promise<Draft>;
   updateLayoutItems(draftId: string, input: UpdateLayoutItemsInput): Promise<DraftWithLayoutItemsAndImages>;
   markAsOrdered(draftId: string): Promise<void>;
+  findDraftsByUser(userId: string): Promise<DraftListSummary[]>;
+  findDraftByIdAndUser(id: string, userId: string): Promise<DraftWithLayoutItemsAndImages | null>;
 }
+
+export type {
+  CreateDraftWithLayoutItemsInput,
+  DraftWithLayoutItems,
+  DraftWithLayoutItemsAndImages,
+  UpdateLayoutItemsInput,
+  DraftWithImagesForOrder,
+  CreateOrderWithDraftUpdateInput,
+  DraftListSummary,
+} from "../../application/use-cases/drafts/dtos/DraftRepository.dto";

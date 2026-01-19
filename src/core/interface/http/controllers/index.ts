@@ -4,6 +4,8 @@ import { OrderController } from "./OrderController";
 import { HealthController } from "./HealthController";
 import { LayoutController } from "./LayoutController";
 import { UserController } from "./UserController";
+import { MeDraftController } from "./MeDraftController";
+import { MeOrderController } from "./MeOrderController";
 
 export interface Controllers {
   draftController: DraftController;
@@ -12,4 +14,6 @@ export interface Controllers {
   healthController: HealthController;
   layoutController: LayoutController;
   userController: UserController;
+  meDraftController: MeDraftController;
+  meOrderController: MeOrderController;
 }

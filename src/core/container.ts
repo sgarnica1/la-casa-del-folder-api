@@ -4,6 +4,8 @@ import { OrderController } from "./interface/http/controllers/OrderController";
 import { HealthController } from "./interface/http/controllers/HealthController";
 import { LayoutController } from "./interface/http/controllers/LayoutController";
 import { UserController } from "./interface/http/controllers/UserController";
+import { MeDraftController } from "./interface/http/controllers/MeDraftController";
+import { MeOrderController } from "./interface/http/controllers/MeOrderController";
 import type { Controllers } from "./interface/http/controllers";
 import { CreateDraft } from "./application/use-cases/drafts/CreateDraft";
 import { GetDraftById } from "./application/use-cases/drafts/GetDraftById";
@@ -14,6 +16,10 @@ import { LockDraft } from "./application/use-cases/drafts/LockDraft";
 import { CreateOrder } from "./application/use-cases/orders/CreateOrder";
 import { GetAllOrders } from "./application/use-cases/orders/GetAllOrders";
 import { GetOrderById } from "./application/use-cases/orders/GetOrderById";
+import { GetMyDrafts } from "./application/use-cases/drafts/GetMyDrafts";
+import { GetMyDraftById } from "./application/use-cases/drafts/GetMyDraftById";
+import { GetMyOrders } from "./application/use-cases/orders/GetMyOrders";
+import { GetMyOrderById } from "./application/use-cases/orders/GetMyOrderById";
 import { GetLayoutByTemplateId } from "./application/use-cases/layouts/GetLayoutByTemplateId";
 import { PrismaDraftRepository } from "./infrastructure/repositories/PrismaDraftRepository";
 import { PrismaAssetRepository } from "./infrastructure/repositories/PrismaAssetRepository";
@@ -43,6 +49,10 @@ class Container {
   private _createOrder: CreateOrder | null = null;
   private _getAllOrders: GetAllOrders | null = null;
   private _getOrderById: GetOrderById | null = null;
+  private _getMyDrafts: GetMyDrafts | null = null;
+  private _getMyDraftById: GetMyDraftById | null = null;
+  private _getMyOrders: GetMyOrders | null = null;
+  private _getMyOrderById: GetMyOrderById | null = null;
   private _getLayoutByTemplateId: GetLayoutByTemplateId | null = null;
 
   private _draftController: DraftController | null = null;
@@ -51,6 +61,8 @@ class Container {
   private _healthController: HealthController | null = null;
   private _layoutController: LayoutController | null = null;
   private _userController: UserController | null = null;
+  private _meDraftController: MeDraftController | null = null;
+  private _meOrderController: MeOrderController | null = null;
 
   get draftRepository(): PrismaDraftRepository {
     if (!this._draftRepository) {
@@ -194,6 +206,42 @@ class Container {
     return this._getOrderById;
   }
 
+  get getMyDrafts(): GetMyDrafts {
+    if (!this._getMyDrafts) {
+      this._getMyDrafts = new GetMyDrafts({
+        draftRepository: this.draftRepository,
+      });
+    }
+    return this._getMyDrafts;
+  }
+
+  get getMyDraftById(): GetMyDraftById {
+    if (!this._getMyDraftById) {
+      this._getMyDraftById = new GetMyDraftById({
+        draftRepository: this.draftRepository,
+      });
+    }
+    return this._getMyDraftById;
+  }
+
+  get getMyOrders(): GetMyOrders {
+    if (!this._getMyOrders) {
+      this._getMyOrders = new GetMyOrders({
+        orderRepository: this.orderRepository,
+      });
+    }
+    return this._getMyOrders;
+  }
+
+  get getMyOrderById(): GetMyOrderById {
+    if (!this._getMyOrderById) {
+      this._getMyOrderById = new GetMyOrderById({
+        orderRepository: this.orderRepository,
+      });
+    }
+    return this._getMyOrderById;
+  }
+
   get getLayoutByTemplateId(): GetLayoutByTemplateId {
     if (!this._getLayoutByTemplateId) {
       this._getLayoutByTemplateId = new GetLayoutByTemplateId({
@@ -258,6 +306,26 @@ class Container {
     return this._userController;
   }
 
+  get meDraftController(): MeDraftController {
+    if (!this._meDraftController) {
+      this._meDraftController = new MeDraftController(
+        this.getMyDrafts,
+        this.getMyDraftById
+      );
+    }
+    return this._meDraftController;
+  }
+
+  get meOrderController(): MeOrderController {
+    if (!this._meOrderController) {
+      this._meOrderController = new MeOrderController(
+        this.getMyOrders,
+        this.getMyOrderById
+      );
+    }
+    return this._meOrderController;
+  }
+
   get controllers(): Controllers {
     return {
       draftController: this.draftController,
@@ -266,6 +334,8 @@ class Container {
       healthController: this.healthController,
       layoutController: this.layoutController,
       userController: this.userController,
+      meDraftController: this.meDraftController,
+      meOrderController: this.meOrderController,
     };
   }
 

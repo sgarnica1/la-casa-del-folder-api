@@ -1,4 +1,4 @@
-import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems, DraftWithLayoutItemsAndImages, UpdateLayoutItemsInput, DraftWithImagesForOrder } from "../../domain/repositories/DraftRepository";
+import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems, DraftWithLayoutItemsAndImages, UpdateLayoutItemsInput, DraftWithImagesForOrder, DraftListSummary } from "../../domain/repositories/DraftRepository";
 import { Draft, DraftStateEnum } from "../../domain/entities/Draft";
 import { DraftLayoutItem } from "../../domain/entities/DraftLayoutItem";
 import { prisma } from "../prisma/client";
@@ -337,5 +337,82 @@ export class PrismaDraftRepository implements DraftRepository {
       where: { id: draftId },
       data: { status: "ordered" },
     });
+  }
+
+  async findDraftsByUser(userId: string): Promise<DraftListSummary[]> {
+    const drafts = await prisma.draft.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        layoutItems: {
+          include: {
+            images: {
+              take: 1,
+              include: {
+                uploadedImage: {
+                  select: {
+                    originalUrl: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { layoutIndex: "asc" },
+          take: 1,
+        },
+      },
+    });
+
+    return drafts.map((draft) => {
+      const firstLayoutItem = draft.layoutItems[0];
+      const firstImage = firstLayoutItem?.images[0];
+      const coverUrl = firstImage?.uploadedImage?.originalUrl || null;
+
+      return {
+        id: draft.id,
+        title: draft.title,
+        state: draft.status as DraftStateEnum,
+        updatedAt: draft.updatedAt,
+        coverUrl,
+      };
+    });
+  }
+
+  async findDraftByIdAndUser(id: string, userId: string): Promise<DraftWithLayoutItemsAndImages | null> {
+    const draft = await prisma.draft.findFirst({
+      where: { id, userId },
+      include: {
+        layoutItems: {
+          include: {
+            images: {
+              take: 1,
+            },
+          },
+          orderBy: { layoutIndex: "asc" },
+        },
+      },
+    });
+
+    if (!draft) {
+      return null;
+    }
+
+    return {
+      draft: {
+        id: draft.id,
+        userId: draft.userId,
+        productId: draft.productId,
+        templateId: draft.templateId!,
+        state: draft.status as DraftStateEnum,
+        title: draft.title || undefined,
+        createdAt: draft.createdAt,
+        updatedAt: draft.updatedAt,
+      },
+      layoutItems: draft.layoutItems.map((item) => ({
+        id: item.id,
+        layoutIndex: item.layoutIndex,
+        imageId: item.images[0]?.uploadedImageId || null,
+      })),
+    };
   }
 }

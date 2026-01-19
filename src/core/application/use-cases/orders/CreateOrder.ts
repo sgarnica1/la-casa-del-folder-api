@@ -78,6 +78,7 @@ export class CreateOrder {
       draftId: validatedInput.draftId,
       productId: draftWithItems.draft.productId,
       templateId: draftWithItems.draft.templateId,
+      title: draftWithItems.draft.title || null,
       layoutItems: draftData.layoutItems.map((item) => ({
         layoutIndex: item.layoutIndex,
         type: item.type,
