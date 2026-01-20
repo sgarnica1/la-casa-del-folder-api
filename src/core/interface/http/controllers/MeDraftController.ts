@@ -24,6 +24,7 @@ export class MeDraftController {
           title: draft.title,
           state: draft.state,
           updatedAt: draft.updatedAt.toISOString(),
+          coverUrl: draft.coverUrl,
         }))
       );
     } catch (error) {

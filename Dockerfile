@@ -1,27 +1,32 @@
-FROM node:18-alpine3.18 AS base
-RUN apk add --no-cache openssl1.1-compat
-RUN npm install -g pnpm
+FROM node:18-alpine3.18
 
-FROM base AS deps
-WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Install OpenSSL 3 for Prisma
+RUN apk add --no-cache openssl libc6-compat
 
-FROM base AS build
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+
+# Copy package files
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+
+# Copy Prisma schema (needed for postinstall hook)
+COPY prisma ./prisma
+
+# Install pnpm and dependencies
+RUN npm install -g pnpm@9.0.0
+RUN pnpm install --no-frozen-lockfile
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Copy rest of source code
 COPY . .
-RUN pnpm prisma:generate
-RUN pnpm build
 
-FROM base AS runtime
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=8080
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/prisma ./prisma
-COPY package.json ./
+# Build the application
+RUN pnpm run build
 
+# Expose port
 EXPOSE 8080
+
+# Start the application
 CMD ["node", "dist/index.js"]

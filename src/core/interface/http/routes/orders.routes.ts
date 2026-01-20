@@ -8,7 +8,7 @@ import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 export function createOrderRoutes(orderController: OrderController, draftRepository: DraftRepository): Router {
   const router = Router();
 
-  const createOrderGuard = createCreateOrderGuard(draftRepository);
+  const createOrderGuard = asyncHandler(createCreateOrderGuard(draftRepository));
 
   // Admin-only routes for dashboard
   router.get("/", requireAdmin, asyncHandler((req, res, next) => orderController.getAll(req, res, next)));

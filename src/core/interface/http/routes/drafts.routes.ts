@@ -7,7 +7,7 @@ import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 export function createDraftRoutes(draftController: DraftController, draftRepository: DraftRepository): Router {
   const router = Router();
 
-  const draftOwnershipGuard = createDraftOwnershipGuard(draftRepository);
+  const draftOwnershipGuard = asyncHandler(createDraftOwnershipGuard(draftRepository));
 
   router.get("/:id", draftOwnershipGuard, asyncHandler((req, res, next) => draftController.getById(req, res, next)));
   router.post("/", asyncHandler((req, res, next) => draftController.create(req, res, next)));

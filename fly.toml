@@ -9,12 +9,10 @@ primary_region = 'dfw'
 [build]
   dockerfile = 'Dockerfile'
 
-[deploy]
-  release_command = 'pnpm prisma generate && pnpm prisma migrate deploy'
-
 [env]
   NODE_ENV = 'production'
   PORT = '8080'
+  FRONTEND_URL = 'https://la-casa-del-folder-web-app.vercel.app'
 
 [http_service]
   internal_port = 8080

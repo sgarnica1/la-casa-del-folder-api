@@ -12,12 +12,31 @@ import { config } from "../../../config";
 function createApp(controllers: Controllers, repositories: Repositories): express.Application {
   const app = express();
 
+  const allowedOrigins =
+    config.nodeEnv === "development"
+      ? ["http://localhost:5173", "http://localhost:5174"]
+      : process.env.FRONTEND_URL
+        ? [process.env.FRONTEND_URL]
+        : [];
+
+  if (allowedOrigins.length === 0 && config.nodeEnv === "production") {
+    console.warn("WARNING: No FRONTEND_URL set in production. CORS may not work correctly.");
+  }
+
   app.use(
     cors({
-      origin:
-        config.nodeEnv === "development"
-          ? ["http://localhost:5173", "http://localhost:5174"]
-          : process.env.FRONTEND_URL || "*",
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+        } else if (allowedOrigins.includes(origin)) {
+          callback(null, origin);
+        } else if (allowedOrigins.length === 0 && config.nodeEnv !== "production") {
+          callback(null, true);
+        } else {
+          console.error(`CORS rejected origin: ${origin}`);
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       credentials: true,
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
@@ -41,7 +60,7 @@ function createApp(controllers: Controllers, repositories: Repositories): expres
 export function startServer(controllers: Controllers, repositories: Repositories): void {
   const app = createApp(controllers, repositories);
 
-  app.listen(config.port, () => {
-    console.log(`Server running on port http://localhost:${config.port}`);
+  app.listen(config.port, "0.0.0.0", () => {
+    console.log(`Server running on port http://0.0.0.0:${config.port}`);
   });
 }

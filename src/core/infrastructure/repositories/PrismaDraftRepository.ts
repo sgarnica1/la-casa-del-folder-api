@@ -341,7 +341,12 @@ export class PrismaDraftRepository implements DraftRepository {
 
   async findDraftsByUser(userId: string): Promise<DraftListSummary[]> {
     const drafts = await prisma.draft.findMany({
-      where: { userId },
+      where: {
+        userId,
+        status: {
+          in: ['editing', 'locked']
+        }
+      },
       orderBy: { updatedAt: "desc" },
       include: {
         layoutItems: {
