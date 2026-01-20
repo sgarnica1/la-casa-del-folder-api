@@ -1,5 +1,6 @@
-FROM node:18-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+FROM node:18-alpine3.18 AS base
+RUN apk add --no-cache openssl1.1-compat
+RUN npm install -g pnpm
 
 FROM base AS deps
 WORKDIR /app
@@ -16,6 +17,7 @@ RUN pnpm build
 FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PORT=8080
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
