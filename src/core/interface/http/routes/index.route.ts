@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import type { Controllers } from "../controllers";
 import type { Repositories } from "../../../domain/repositories";
@@ -12,7 +12,7 @@ import { createUserProvisioningMiddleware } from "../middleware/authMiddleware";
 import { UnauthorizedError } from "../../../domain/errors/DomainErrors";
 import { asyncHandler } from "../middleware/asyncHandler";
 
-function requireAuthApi(req: any, res: any, next: any): void {
+function requireAuthApi(req: Request, _: Response, next: NextFunction): void {
   const { userId } = getAuth(req);
   if (!userId) {
     throw new UnauthorizedError("Authentication required");
