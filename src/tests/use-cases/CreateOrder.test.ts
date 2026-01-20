@@ -2,33 +2,29 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { CreateOrder } from "../../core/application/use-cases/orders/CreateOrder";
 import { OrderRepository } from "../../core/domain/repositories/OrderRepository";
 import { DraftRepository } from "../../core/domain/repositories/DraftRepository";
-import { DraftState } from "../../core/domain/entities/Draft";
+import { ProductRepository } from "../../core/domain/repositories/ProductRepository";
+import { ProductTemplateRepository } from "../../core/domain/repositories/ProductTemplateRepository";
+import { DraftStateEnum } from "../../core/domain/entities/Draft";
 import { OrderState } from "../../core/domain/entities/Order";
-import { NotFoundError } from "../../core/domain/errors/DomainErrors";
-import { prisma } from "../../core/infrastructure/prisma/client";
+import { NotFoundError, ConflictError } from "../../core/domain/errors/DomainErrors";
 
-vi.mock("../../core/infrastructure/prisma/client", () => ({
-  prisma: {
-    product: {
-      findUnique: vi.fn(),
-    },
-    draft: {
-      findUnique: vi.fn(),
-    },
-    $transaction: vi.fn(),
-  },
+vi.mock("../../core/interface/http/middleware/draftGuards", () => ({
+  validateDraftCompleteness: vi.fn().mockResolvedValue({ isComplete: true, missingSlots: [] }),
 }));
 
 describe("CreateOrder", () => {
   let createOrder: CreateOrder;
   let mockOrderRepository: OrderRepository;
   let mockDraftRepository: DraftRepository;
+  let mockProductRepository: ProductRepository;
+  let mockProductTemplateRepository: ProductTemplateRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockOrderRepository = {
       create: vi.fn(),
+      createWithDraftUpdate: vi.fn(),
       findById: vi.fn(),
     } as unknown as OrderRepository;
 
@@ -37,35 +33,49 @@ describe("CreateOrder", () => {
       createWithLayoutItems: vi.fn(),
       findById: vi.fn(),
       findByIdWithLayoutItems: vi.fn(),
+      findByIdWithLayoutItemsAndImages: vi.fn(),
+      findByIdWithImagesForOrder: vi.fn(),
       update: vi.fn(),
     } as unknown as DraftRepository;
+
+    mockProductRepository = {
+      findById: vi.fn(),
+      findActiveProduct: vi.fn(),
+    } as unknown as ProductRepository;
+
+    mockProductTemplateRepository = {
+      findActiveTemplateByProductId: vi.fn(),
+      findLayoutItemsByTemplateId: vi.fn(),
+    } as unknown as ProductTemplateRepository;
 
     createOrder = new CreateOrder({
       orderRepository: mockOrderRepository,
       draftRepository: mockDraftRepository,
+      productRepository: mockProductRepository,
+      productTemplateRepository: mockProductTemplateRepository,
     });
   });
 
   it("should create an order successfully from a locked draft", async () => {
-    const draftId = "draft-123";
-    const productId = "product-123";
-    const templateId = "template-123";
-    const orderId = "order-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
+    const productId = "123e4567-e89b-12d3-a456-426614174001";
+    const templateId = "123e4567-e89b-12d3-a456-426614174002";
+    const orderId = "123e4567-e89b-12d3-a456-426614174003";
     const now = new Date();
 
     const mockDraftWithItems = {
       draft: {
         id: draftId,
-        userId: "user-123",
+        userId: "123e4567-e89b-12d3-a456-426614174004",
         productId,
         templateId,
-        state: DraftState.LOCKED,
+        state: DraftStateEnum.LOCKED,
         createdAt: now,
         updatedAt: now,
       },
       layoutItems: [
         {
-          id: "item-1",
+          id: "123e4567-e89b-12d3-a456-426614174005",
           draftId,
           layoutIndex: 1,
           type: "image" as const,
@@ -78,22 +88,32 @@ describe("CreateOrder", () => {
 
     const mockProduct = {
       id: productId,
+      categoryId: "123e4567-e89b-12d3-a456-426614174007",
       name: "Calendar",
+      description: "Test calendar",
       basePrice: 29.99,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
     };
 
-    const mockDraftData = {
-      id: draftId,
+    const mockDraftDataForOrder = {
       layoutItems: [
         {
           layoutIndex: 1,
-          type: "image",
+          type: "image" as const,
           transformJson: null,
           images: [
             {
-              uploadedImageId: "image-123",
+              uploadedImageId: "123e4567-e89b-12d3-a456-426614174006",
               uploadedImage: {
+                id: "123e4567-e89b-12d3-a456-426614174006",
+                cloudinaryPublicId: "test-public-id",
                 originalUrl: "https://example.com/image.jpg",
+                width: 100,
+                height: 100,
+                createdAt: now,
+                updatedAt: now,
               },
               transformJson: null,
             },
@@ -104,23 +124,15 @@ describe("CreateOrder", () => {
 
     const mockOrder = {
       id: orderId,
+      draftId,
+      state: OrderState.PENDING,
       createdAt: now,
     };
 
     vi.mocked(mockDraftRepository.findByIdWithLayoutItems).mockResolvedValue(mockDraftWithItems);
-    vi.mocked(prisma.product.findUnique).mockResolvedValue(mockProduct as any);
-    vi.mocked(prisma.draft.findUnique).mockResolvedValue(mockDraftData as any);
-    vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
-      const tx = {
-        order: {
-          create: vi.fn().mockResolvedValue(mockOrder),
-        },
-        draft: {
-          update: vi.fn().mockResolvedValue({}),
-        },
-      };
-      return callback(tx);
-    });
+    vi.mocked(mockProductRepository.findById).mockResolvedValue(mockProduct);
+    vi.mocked(mockDraftRepository.findByIdWithImagesForOrder).mockResolvedValue(mockDraftDataForOrder);
+    vi.mocked(mockOrderRepository.createWithDraftUpdate).mockResolvedValue(mockOrder);
 
     const result = await createOrder.execute({ draftId });
 
@@ -128,48 +140,32 @@ describe("CreateOrder", () => {
     expect(result.draftId).toBe(draftId);
     expect(result.state).toBe(OrderState.PENDING);
     expect(mockDraftRepository.findByIdWithLayoutItems).toHaveBeenCalledWith(draftId);
-    expect(prisma.product.findUnique).toHaveBeenCalledWith({
-      where: { id: productId },
-    });
-    expect(prisma.draft.findUnique).toHaveBeenCalledWith({
-      where: { id: draftId },
-      include: {
-        layoutItems: {
-          include: {
-            images: {
-              include: {
-                uploadedImage: true,
-              },
-            },
-          },
-          orderBy: { layoutIndex: "asc" },
-        },
-      },
-    });
-    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(mockProductRepository.findById).toHaveBeenCalledWith(productId);
+    expect(mockDraftRepository.findByIdWithImagesForOrder).toHaveBeenCalledWith(draftId);
+    expect(mockOrderRepository.createWithDraftUpdate).toHaveBeenCalled();
   });
 
   it("should throw NotFoundError when draft does not exist", async () => {
-    const draftId = "draft-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
 
     vi.mocked(mockDraftRepository.findByIdWithLayoutItems).mockResolvedValue(null);
 
     await expect(createOrder.execute({ draftId })).rejects.toThrow(NotFoundError);
     expect(mockDraftRepository.findByIdWithLayoutItems).toHaveBeenCalledWith(draftId);
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(mockOrderRepository.createWithDraftUpdate).not.toHaveBeenCalled();
   });
 
   it("should throw error when draft is not locked", async () => {
-    const draftId = "draft-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
     const now = new Date();
 
     const mockDraftWithItems = {
       draft: {
         id: draftId,
-        userId: "user-123",
-        productId: "product-123",
-        templateId: "template-123",
-        state: DraftState.EDITING,
+        userId: "123e4567-e89b-12d3-a456-426614174004",
+        productId: "123e4567-e89b-12d3-a456-426614174001",
+        templateId: "123e4567-e89b-12d3-a456-426614174002",
+        state: DraftStateEnum.EDITING,
         createdAt: now,
         updatedAt: now,
       },
@@ -178,22 +174,22 @@ describe("CreateOrder", () => {
 
     vi.mocked(mockDraftRepository.findByIdWithLayoutItems).mockResolvedValue(mockDraftWithItems);
 
-    await expect(createOrder.execute({ draftId })).rejects.toThrow("Draft must be locked before creating an order");
+    await expect(createOrder.execute({ draftId })).rejects.toThrow(ConflictError);
     expect(mockDraftRepository.findByIdWithLayoutItems).toHaveBeenCalledWith(draftId);
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(mockOrderRepository.createWithDraftUpdate).not.toHaveBeenCalled();
   });
 
   it("should throw NotFoundError when product does not exist", async () => {
-    const draftId = "draft-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
     const now = new Date();
 
     const mockDraftWithItems = {
       draft: {
         id: draftId,
-        userId: "user-123",
-        productId: "product-123",
-        templateId: "template-123",
-        state: DraftState.LOCKED,
+        userId: "123e4567-e89b-12d3-a456-426614174004",
+        productId: "123e4567-e89b-12d3-a456-426614174001",
+        templateId: "123e4567-e89b-12d3-a456-426614174002",
+        state: DraftStateEnum.LOCKED,
         createdAt: now,
         updatedAt: now,
       },
@@ -201,12 +197,10 @@ describe("CreateOrder", () => {
     };
 
     vi.mocked(mockDraftRepository.findByIdWithLayoutItems).mockResolvedValue(mockDraftWithItems);
-    vi.mocked(prisma.product.findUnique).mockResolvedValue(null);
+    vi.mocked(mockProductRepository.findById).mockResolvedValue(null);
 
     await expect(createOrder.execute({ draftId })).rejects.toThrow(NotFoundError);
-    expect(prisma.product.findUnique).toHaveBeenCalledWith({
-      where: { id: "product-123" },
-    });
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(mockProductRepository.findById).toHaveBeenCalledWith("123e4567-e89b-12d3-a456-426614174001");
+    expect(mockOrderRepository.createWithDraftUpdate).not.toHaveBeenCalled();
   });
 });
