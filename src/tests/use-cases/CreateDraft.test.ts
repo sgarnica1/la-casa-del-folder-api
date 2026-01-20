@@ -3,7 +3,8 @@ import { CreateDraft } from "../../core/application/use-cases/drafts/CreateDraft
 import { DraftRepository } from "../../core/domain/repositories/DraftRepository";
 import { ProductRepository } from "../../core/domain/repositories/ProductRepository";
 import { ProductTemplateRepository } from "../../core/domain/repositories/ProductTemplateRepository";
-import { DraftState } from "../../core/domain/entities/Draft";
+import { DraftStateEnum } from "../../core/domain/entities/Draft";
+import { LayoutItemType } from "../../core/domain/entities/DraftLayoutItem";
 import { NotFoundError } from "../../core/domain/errors/DomainErrors";
 
 describe("CreateDraft", () => {
@@ -38,15 +39,15 @@ describe("CreateDraft", () => {
   });
 
   it("should create a draft with layout items successfully", async () => {
-    const userId = "user-123";
-    const productId = "product-123";
-    const templateId = "template-123";
-    const draftId = "draft-123";
+    const userId = "123e4567-e89b-12d3-a456-426614174000";
+    const productId = "123e4567-e89b-12d3-a456-426614174001";
+    const templateId = "123e4567-e89b-12d3-a456-426614174002";
+    const draftId = "123e4567-e89b-12d3-a456-426614174003";
     const now = new Date();
 
     const mockProduct = {
       id: productId,
-      categoryId: "category-123",
+      categoryId: "123e4567-e89b-12d3-a456-426614174004",
       name: "Calendar",
       description: "Test calendar",
       basePrice: 29.99,
@@ -59,13 +60,33 @@ describe("CreateDraft", () => {
       id: templateId,
       productId: productId,
       name: "Calendar Template",
+      description: "Test template",
+      status: "active",
       createdAt: now,
       updatedAt: now,
     };
 
     const mockLayoutItems = [
-      { layoutIndex: 1, type: "image" },
-      { layoutIndex: 2, type: "image" },
+      {
+        id: "123e4567-e89b-12d3-a456-426614174007",
+        templateId: templateId,
+        layoutIndex: 1,
+        type: LayoutItemType.IMAGE,
+        editable: true,
+        constraintsJson: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: "123e4567-e89b-12d3-a456-426614174008",
+        templateId: templateId,
+        layoutIndex: 2,
+        type: LayoutItemType.IMAGE,
+        editable: true,
+        constraintsJson: null,
+        createdAt: now,
+        updatedAt: now,
+      },
     ];
 
     const mockDraftWithItems = {
@@ -74,25 +95,25 @@ describe("CreateDraft", () => {
         userId,
         productId,
         templateId,
-        state: DraftState.EDITING,
+        state: DraftStateEnum.EDITING,
         createdAt: now,
         updatedAt: now,
       },
       layoutItems: [
         {
-          id: "item-1",
+          id: "123e4567-e89b-12d3-a456-426614174005",
           draftId,
           layoutIndex: 1,
-          type: "image" as const,
+          type: LayoutItemType.IMAGE,
           transformJson: null,
           createdAt: now,
           updatedAt: now,
         },
         {
-          id: "item-2",
+          id: "123e4567-e89b-12d3-a456-426614174006",
           draftId,
           layoutIndex: 2,
-          type: "image" as const,
+          type: LayoutItemType.IMAGE,
           transformJson: null,
           createdAt: now,
           updatedAt: now,
@@ -110,7 +131,7 @@ describe("CreateDraft", () => {
     expect(result.draft.id).toBe(draftId);
     expect(result.draft.productId).toBe(productId);
     expect(result.draft.templateId).toBe(templateId);
-    expect(result.draft.state).toBe(DraftState.EDITING);
+    expect(result.draft.state).toBe(DraftStateEnum.EDITING);
     expect(result.layoutItems).toHaveLength(2);
     expect(result.layoutItems[0].layoutIndex).toBe(1);
     expect(result.layoutItems[1].layoutIndex).toBe(2);
@@ -123,7 +144,7 @@ describe("CreateDraft", () => {
         userId,
         productId,
         templateId,
-        state: DraftState.EDITING,
+        state: DraftStateEnum.EDITING,
       },
       layoutItems: [
         { layoutIndex: 1, type: "image", transformJson: null },
@@ -135,15 +156,15 @@ describe("CreateDraft", () => {
   it("should throw NotFoundError when no active product exists", async () => {
     vi.mocked(mockProductRepository.findActiveProduct).mockResolvedValue(null);
 
-    await expect(createDraft.execute({ userId: "user-123" })).rejects.toThrow(NotFoundError);
+    await expect(createDraft.execute({ userId: "123e4567-e89b-12d3-a456-426614174000" })).rejects.toThrow(NotFoundError);
     expect(mockProductRepository.findActiveProduct).toHaveBeenCalledOnce();
     expect(mockDraftRepository.createWithLayoutItems).not.toHaveBeenCalled();
   });
 
   it("should throw NotFoundError when no active template exists", async () => {
     const mockProduct = {
-      id: "product-123",
-      categoryId: "category-123",
+      id: "123e4567-e89b-12d3-a456-426614174001",
+      categoryId: "123e4567-e89b-12d3-a456-426614174004",
       name: "Calendar",
       description: "Test calendar",
       basePrice: 29.99,
@@ -155,8 +176,8 @@ describe("CreateDraft", () => {
     vi.mocked(mockProductRepository.findActiveProduct).mockResolvedValue(mockProduct);
     vi.mocked(mockProductTemplateRepository.findActiveTemplateByProductId).mockResolvedValue(null);
 
-    await expect(createDraft.execute({ userId: "user-123" })).rejects.toThrow(NotFoundError);
-    expect(mockProductTemplateRepository.findActiveTemplateByProductId).toHaveBeenCalledWith("product-123");
+    await expect(createDraft.execute({ userId: "123e4567-e89b-12d3-a456-426614174000" })).rejects.toThrow(NotFoundError);
+    expect(mockProductTemplateRepository.findActiveTemplateByProductId).toHaveBeenCalledWith("123e4567-e89b-12d3-a456-426614174001");
     expect(mockDraftRepository.createWithLayoutItems).not.toHaveBeenCalled();
   });
 });

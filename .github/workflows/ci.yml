@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.0.0
+
+      - name: Install dependencies
+        working-directory: ./la-casa-del-folder-api
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        working-directory: ./la-casa-del-folder-api
+        run: pnpm prisma:generate
+
+      - name: Build
+        working-directory: ./la-casa-del-folder-api
+        run: pnpm build
+
+      - name: Run tests
+        working-directory: ./la-casa-del-folder-api
+        run: pnpm test
+        env:
+          NODE_ENV: test
