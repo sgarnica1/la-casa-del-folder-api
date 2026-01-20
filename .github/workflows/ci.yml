@@ -26,19 +26,15 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        working-directory: ./la-casa-del-folder-api
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
-        working-directory: ./la-casa-del-folder-api
         run: pnpm prisma:generate
 
       - name: Build
-        working-directory: ./la-casa-del-folder-api
         run: pnpm build
 
       - name: Run tests
-        working-directory: ./la-casa-del-folder-api
         run: pnpm test
         env:
           NODE_ENV: test
