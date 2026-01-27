@@ -2,10 +2,9 @@ import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { ProductRepository } from "../../../domain/repositories/ProductRepository";
 import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
-import { DraftStateEnum } from "../../../domain/entities/Draft";
+import { DraftMutationPolicy } from "../../../domain/policies/DraftMutationPolicy";
 import {
   NotFoundError,
-  ConflictError,
   UnprocessableEntityError,
   ValidationError,
 } from "../../../domain/errors/DomainErrors";
@@ -20,7 +19,11 @@ export interface CreateOrderDependencies {
 }
 
 export class CreateOrder {
-  constructor(private deps: CreateOrderDependencies) { }
+  private draftMutationPolicy: DraftMutationPolicy;
+
+  constructor(private deps: CreateOrderDependencies) {
+    this.draftMutationPolicy = new DraftMutationPolicy(deps.draftRepository);
+  }
 
   async execute(input: unknown): Promise<CreateOrderOutput> {
     const validationResult = CreateOrderInputSchema.safeParse(input);
@@ -36,12 +39,7 @@ export class CreateOrder {
       throw new NotFoundError("Draft", validatedInput.draftId);
     }
 
-    if (draftWithItems.draft.state !== DraftStateEnum.LOCKED) {
-      if (draftWithItems.draft.state === DraftStateEnum.ORDERED) {
-        throw new ConflictError("Draft already converted to order");
-      }
-      throw new ConflictError("Draft must be locked before creating an order");
-    }
+    await this.draftMutationPolicy.assertCanCheckout(validatedInput.draftId);
 
     if (!draftWithItems.draft.templateId) {
       throw new UnprocessableEntityError("Draft template is missing");

@@ -6,6 +6,8 @@ import { LayoutController } from "./LayoutController";
 import { UserController } from "./UserController";
 import { MeDraftController } from "./MeDraftController";
 import { MeOrderController } from "./MeOrderController";
+import { CartController } from "./CartController";
+import { ProductController } from "./ProductController";
 
 export interface Controllers {
   draftController: DraftController;
@@ -16,4 +18,6 @@ export interface Controllers {
   userController: UserController;
   meDraftController: MeDraftController;
   meOrderController: MeOrderController;
+  cartController: CartController;
+  productController: ProductController;
 }

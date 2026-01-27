@@ -1,5 +1,5 @@
 import { OrderRepository, OrderListSummary } from "../../domain/repositories/OrderRepository";
-import { OrderWithItems, CreateOrderInput } from "../../application/use-cases/orders/dtos/OrderRepository.dto";
+import { OrderWithItems, CreateOrderInput, CreateOrderWithItemsInput } from "../../application/use-cases/orders/dtos/OrderRepository.dto";
 import { Order, OrderState } from "../../domain/entities/Order";
 import { prisma } from "../prisma/client";
 import { mapPrismaError } from "../errors/PrismaErrorMapper";
@@ -62,6 +62,57 @@ export class PrismaOrderRepository implements OrderRepository {
       return {
         id: result.id,
         draftId: designSnapshot?.draftId || input.draftId,
+        state: OrderState.PENDING,
+        createdAt: result.createdAt,
+      };
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
+
+  async createWithItemsAndDraftUpdate(input: CreateOrderWithItemsInput): Promise<Order> {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const order = await tx.order.create({
+          data: {
+            userId: input.userId,
+            totalAmount: input.totalAmount,
+            paymentStatus: "paid",
+            orderStatus: "new",
+            shippingAddressJson: {},
+            items: {
+              create: input.items.map((item) => ({
+                productNameSnapshot: item.productName,
+                variantNameSnapshot: item.variantName,
+                quantity: item.quantity,
+                priceSnapshot: item.priceSnapshot,
+                designSnapshotJson: item.designSnapshot as Prisma.InputJsonValue,
+              })),
+            },
+          },
+          include: {
+            items: true,
+          },
+        });
+
+        await tx.draft.updateMany({
+          where: {
+            id: {
+              in: input.draftIds,
+            },
+          },
+          data: { status: "ordered" },
+        });
+
+        return order;
+      });
+
+      const firstItem = result.items[0];
+      const designSnapshot = firstItem?.designSnapshotJson as { draftId?: string } | null;
+
+      return {
+        id: result.id,
+        draftId: designSnapshot?.draftId || input.draftIds[0],
         state: OrderState.PENDING,
         createdAt: result.createdAt,
       };
@@ -303,6 +354,7 @@ export class PrismaOrderRepository implements OrderRepository {
         createdAt: order.createdAt,
         title,
         coverUrl,
+        productName: firstItem?.productNameSnapshot || null,
       };
     });
   }

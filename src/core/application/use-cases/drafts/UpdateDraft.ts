@@ -1,5 +1,6 @@
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { DraftMutationPolicy } from "../../../domain/policies/DraftMutationPolicy";
+import { DraftStateEnum } from "../../../domain/entities/Draft";
 import { ValidationError } from "../../../domain/errors/DomainErrors";
 import { UpdateDraftInputSchema, UpdateDraftOutput } from "./dtos/UpdateDraft.dto";
 
@@ -24,11 +25,23 @@ export class UpdateDraft {
     const validatedInput = validationResult.data;
     await this.draftMutationPolicy.assertEditable(validatedInput.draftId);
 
-    // Update title if provided
+    const draft = await this.deps.draftRepository.findById(validatedInput.draftId);
+    if (!draft) {
+      throw new ValidationError("Draft not found", { issues: [] });
+    }
+
+    const updates: Partial<typeof draft> = {};
+
     if (validatedInput.title !== undefined) {
-      await this.deps.draftRepository.update(validatedInput.draftId, {
-        title: validatedInput.title,
-      });
+      updates.title = validatedInput.title;
+    }
+
+    if (draft.state === DraftStateEnum.LOCKED) {
+      updates.state = DraftStateEnum.EDITING;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await this.deps.draftRepository.update(validatedInput.draftId, updates);
     }
 
     // Update layout items if provided

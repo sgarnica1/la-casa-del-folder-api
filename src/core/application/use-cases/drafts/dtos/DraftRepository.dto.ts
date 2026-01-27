@@ -103,3 +103,20 @@ export const DraftListSummarySchema = z.object({
 });
 
 export type DraftListSummary = z.infer<typeof DraftListSummarySchema>;
+
+export const SelectedOptionSnapshotSchema = z.object({
+  optionTypeId: z.string(),
+  optionTypeName: z.string(),
+  optionValueId: z.string(),
+  optionValueName: z.string(),
+  priceModifier: z.number().nullable(),
+});
+
+export type SelectedOptionSnapshot = z.infer<typeof SelectedOptionSnapshotSchema>;
+
+export const DraftWithSelectedOptionsSchema = z.object({
+  draft: DraftSchema,
+  selectedOptions: z.array(SelectedOptionSnapshotSchema),
+});
+
+export type DraftWithSelectedOptions = z.infer<typeof DraftWithSelectedOptionsSchema>;

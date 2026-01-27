@@ -61,6 +61,26 @@ export const CreateOrderInputSchema = z.object({
 
 export type CreateOrderInput = z.infer<typeof CreateOrderInputSchema>;
 
+export const CreateOrderItemInputSchema = z.object({
+  productName: z.string(),
+  variantName: z.string().nullable(),
+  quantity: z.number().int().positive(),
+  priceSnapshot: z.number(),
+  designSnapshot: z.record(z.string(), z.unknown()),
+  draftId: z.uuid(),
+});
+
+export type CreateOrderItemInput = z.infer<typeof CreateOrderItemInputSchema>;
+
+export const CreateOrderWithItemsInputSchema = z.object({
+  userId: z.uuid(),
+  totalAmount: z.number(),
+  items: z.array(CreateOrderItemInputSchema),
+  draftIds: z.array(z.uuid()),
+});
+
+export type CreateOrderWithItemsInput = z.infer<typeof CreateOrderWithItemsInputSchema>;
+
 export const PaginationParamsSchema = z.object({
   page: z.number().int().positive(),
   limit: z.number().int().positive(),
@@ -92,6 +112,7 @@ export const OrderListSummarySchema = z.object({
   createdAt: z.date(),
   title: z.string().nullable(),
   coverUrl: z.string().nullable(),
+  productName: z.string().nullable(),
 });
 
 export type OrderListSummary = z.infer<typeof OrderListSummarySchema>;
