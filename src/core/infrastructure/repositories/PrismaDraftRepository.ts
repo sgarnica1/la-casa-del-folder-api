@@ -1,4 +1,13 @@
-import { DraftRepository, CreateDraftWithLayoutItemsInput, DraftWithLayoutItems, DraftWithLayoutItemsAndImages, UpdateLayoutItemsInput, DraftWithImagesForOrder, DraftListSummary } from "../../domain/repositories/DraftRepository";
+import {
+  DraftRepository,
+  CreateDraftWithLayoutItemsInput,
+  DraftWithLayoutItems,
+  DraftWithLayoutItemsAndImages,
+  UpdateLayoutItemsInput,
+  DraftWithImagesForOrder,
+  DraftListSummary,
+  DraftWithSelectedOptions,
+} from "../../domain/repositories/DraftRepository";
 import { Draft, DraftStateEnum } from "../../domain/entities/Draft";
 import { DraftLayoutItem } from "../../domain/entities/DraftLayoutItem";
 import { prisma } from "../prisma/client";
@@ -381,6 +390,47 @@ export class PrismaDraftRepository implements DraftRepository {
         coverUrl,
       };
     });
+  }
+
+  async findByIdWithSelectedOptions(id: string): Promise<DraftWithSelectedOptions | null> {
+    const draft = await prisma.draft.findUnique({
+      where: { id },
+      include: {
+        selectedOptions: {
+          include: {
+            productOptionValue: {
+              include: {
+                optionType: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!draft) {
+      return null;
+    }
+
+    return {
+      draft: {
+        id: draft.id,
+        userId: draft.userId,
+        productId: draft.productId,
+        templateId: draft.templateId!,
+        state: draft.status as DraftStateEnum,
+        title: draft.title || undefined,
+        createdAt: draft.createdAt,
+        updatedAt: draft.updatedAt,
+      },
+      selectedOptions: draft.selectedOptions.map((selectedOption) => ({
+        optionTypeId: selectedOption.productOptionValue.optionType.id,
+        optionTypeName: selectedOption.productOptionValue.optionType.name,
+        optionValueId: selectedOption.productOptionValue.id,
+        optionValueName: selectedOption.productOptionValue.name,
+        priceModifier: selectedOption.productOptionValue.priceModifier ? Number(selectedOption.productOptionValue.priceModifier) : null,
+      })),
+    };
   }
 
   async findDraftByIdAndUser(id: string, userId: string): Promise<DraftWithLayoutItemsAndImages | null> {

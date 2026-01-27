@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { LockDraft } from "../../core/application/use-cases/drafts/LockDraft";
 import { DraftRepository } from "../../core/domain/repositories/DraftRepository";
-import { Draft, DraftState } from "../../core/domain/entities/Draft";
-import { NotFoundError } from "../../core/domain/errors/DomainErrors";
+import { Draft, DraftStateEnum } from "../../core/domain/entities/Draft";
+import { NotFoundError, ConflictError } from "../../core/domain/errors/DomainErrors";
 
 describe("LockDraft", () => {
   let lockDraft: LockDraft;
@@ -23,22 +23,22 @@ describe("LockDraft", () => {
   });
 
   it("should lock an editing draft successfully", async () => {
-    const draftId = "draft-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
     const now = new Date();
 
     const mockDraft: Draft = {
       id: draftId,
-      userId: "user-123",
-      productId: "product-123",
-      templateId: "template-123",
-      state: DraftState.EDITING,
+      userId: "123e4567-e89b-12d3-a456-426614174001",
+      productId: "123e4567-e89b-12d3-a456-426614174002",
+      templateId: "123e4567-e89b-12d3-a456-426614174003",
+      state: DraftStateEnum.EDITING,
       createdAt: now,
       updatedAt: now,
     };
 
     const mockLockedDraft: Draft = {
       ...mockDraft,
-      state: DraftState.LOCKED,
+      state: DraftStateEnum.LOCKED,
       updatedAt: new Date(),
     };
 
@@ -47,23 +47,23 @@ describe("LockDraft", () => {
 
     const result = await lockDraft.execute({ draftId });
 
-    expect(result.state).toBe(DraftState.LOCKED);
+    expect(result.state).toBe(DraftStateEnum.LOCKED);
     expect(mockDraftRepository.findById).toHaveBeenCalledWith(draftId);
     expect(mockDraftRepository.update).toHaveBeenCalledWith(draftId, {
-      state: DraftState.LOCKED,
+      state: DraftStateEnum.LOCKED,
     });
   });
 
   it("should return draft unchanged if already locked", async () => {
-    const draftId = "draft-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
     const now = new Date();
 
     const mockLockedDraft: Draft = {
       id: draftId,
-      userId: "user-123",
-      productId: "product-123",
-      templateId: "template-123",
-      state: DraftState.LOCKED,
+      userId: "123e4567-e89b-12d3-a456-426614174001",
+      productId: "123e4567-e89b-12d3-a456-426614174002",
+      templateId: "123e4567-e89b-12d3-a456-426614174003",
+      state: DraftStateEnum.LOCKED,
       createdAt: now,
       updatedAt: now,
     };
@@ -72,35 +72,35 @@ describe("LockDraft", () => {
 
     const result = await lockDraft.execute({ draftId });
 
-    expect(result.state).toBe(DraftState.LOCKED);
+    expect(result.state).toBe(DraftStateEnum.LOCKED);
     expect(result.id).toBe(draftId);
     expect(mockDraftRepository.findById).toHaveBeenCalledWith(draftId);
     expect(mockDraftRepository.update).not.toHaveBeenCalled();
   });
 
   it("should throw error when trying to lock an ordered draft", async () => {
-    const draftId = "draft-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
     const now = new Date();
 
     const mockOrderedDraft: Draft = {
       id: draftId,
-      userId: "user-123",
-      productId: "product-123",
-      templateId: "template-123",
-      state: DraftState.ORDERED,
+      userId: "123e4567-e89b-12d3-a456-426614174001",
+      productId: "123e4567-e89b-12d3-a456-426614174002",
+      templateId: "123e4567-e89b-12d3-a456-426614174003",
+      state: DraftStateEnum.ORDERED,
       createdAt: now,
       updatedAt: now,
     };
 
     vi.mocked(mockDraftRepository.findById).mockResolvedValue(mockOrderedDraft);
 
-    await expect(lockDraft.execute({ draftId })).rejects.toThrow("Cannot lock an already ordered draft");
+    await expect(lockDraft.execute({ draftId })).rejects.toThrow(ConflictError);
     expect(mockDraftRepository.findById).toHaveBeenCalledWith(draftId);
     expect(mockDraftRepository.update).not.toHaveBeenCalled();
   });
 
   it("should throw NotFoundError when draft does not exist", async () => {
-    const draftId = "draft-123";
+    const draftId = "123e4567-e89b-12d3-a456-426614174000";
 
     vi.mocked(mockDraftRepository.findById).mockResolvedValue(null);
 

@@ -2,6 +2,7 @@ import { Order } from "../entities/Order";
 import type {
   OrderWithItems,
   CreateOrderInput,
+  CreateOrderWithItemsInput,
   PaginationParams,
   PaginatedResult,
   OrderListSummary,
@@ -10,6 +11,7 @@ import type {
 export interface OrderRepository {
   create(order: Omit<Order, "createdAt">): Promise<Order>;
   createWithDraftUpdate(input: CreateOrderInput): Promise<Order>;
+  createWithItemsAndDraftUpdate(input: CreateOrderWithItemsInput): Promise<Order>;
   findAll(): Promise<OrderWithItems[]>;
   findPaginated(params: PaginationParams): Promise<PaginatedResult<OrderWithItems>>;
   findById(id: string): Promise<OrderWithItems | null>;
@@ -20,6 +22,7 @@ export interface OrderRepository {
 export type {
   OrderWithItems,
   CreateOrderInput,
+  CreateOrderWithItemsInput,
   PaginationParams,
   PaginatedResult,
   OrderListSummary,

@@ -6,6 +6,8 @@ import { LayoutController } from "./interface/http/controllers/LayoutController"
 import { UserController } from "./interface/http/controllers/UserController";
 import { MeDraftController } from "./interface/http/controllers/MeDraftController";
 import { MeOrderController } from "./interface/http/controllers/MeOrderController";
+import { CartController } from "./interface/http/controllers/CartController";
+import { ProductController } from "./interface/http/controllers/ProductController";
 import type { Controllers } from "./interface/http/controllers";
 import { CreateDraft } from "./application/use-cases/drafts/CreateDraft";
 import { GetDraftById } from "./application/use-cases/drafts/GetDraftById";
@@ -21,6 +23,12 @@ import { GetMyDraftById } from "./application/use-cases/drafts/GetMyDraftById";
 import { GetMyOrders } from "./application/use-cases/orders/GetMyOrders";
 import { GetMyOrderById } from "./application/use-cases/orders/GetMyOrderById";
 import { GetLayoutByTemplateId } from "./application/use-cases/layouts/GetLayoutByTemplateId";
+import { GetCart } from "./application/use-cases/cart/GetCart";
+import { AddCartItem } from "./application/use-cases/cart/AddCartItem";
+import { UpdateCartItemQuantity } from "./application/use-cases/cart/UpdateCartItemQuantity";
+import { RemoveCartItem } from "./application/use-cases/cart/RemoveCartItem";
+import { CheckoutCart } from "./application/use-cases/cart/CheckoutCart";
+import { GetProductById } from "./application/use-cases/products/GetProductById";
 import { PrismaDraftRepository } from "./infrastructure/repositories/PrismaDraftRepository";
 import { PrismaAssetRepository } from "./infrastructure/repositories/PrismaAssetRepository";
 import { PrismaUploadedImageRepository } from "./infrastructure/repositories/PrismaUploadedImageRepository";
@@ -29,6 +37,7 @@ import { PrismaProductRepository } from "./infrastructure/repositories/PrismaPro
 import { PrismaProductTemplateRepository } from "./infrastructure/repositories/PrismaProductTemplateRepository";
 import { PrismaUserRepository } from "./infrastructure/repositories/PrismaUserRepository";
 import { PrismaRoleRepository } from "./infrastructure/repositories/PrismaRoleRepository";
+import { PrismaCartRepository } from "./infrastructure/repositories/PrismaCartRepository";
 
 class Container {
   private _draftRepository: PrismaDraftRepository | null = null;
@@ -39,6 +48,7 @@ class Container {
   private _productTemplateRepository: PrismaProductTemplateRepository | null = null;
   private _userRepository: PrismaUserRepository | null = null;
   private _roleRepository: PrismaRoleRepository | null = null;
+  private _cartRepository: PrismaCartRepository | null = null;
 
   private _createDraft: CreateDraft | null = null;
   private _getDraftById: GetDraftById | null = null;
@@ -54,6 +64,12 @@ class Container {
   private _getMyOrders: GetMyOrders | null = null;
   private _getMyOrderById: GetMyOrderById | null = null;
   private _getLayoutByTemplateId: GetLayoutByTemplateId | null = null;
+  private _getCart: GetCart | null = null;
+  private _addCartItem: AddCartItem | null = null;
+  private _updateCartItemQuantity: UpdateCartItemQuantity | null = null;
+  private _removeCartItem: RemoveCartItem | null = null;
+  private _checkoutCart: CheckoutCart | null = null;
+  private _getProductById: GetProductById | null = null;
 
   private _draftController: DraftController | null = null;
   private _assetController: AssetController | null = null;
@@ -63,6 +79,8 @@ class Container {
   private _userController: UserController | null = null;
   private _meDraftController: MeDraftController | null = null;
   private _meOrderController: MeOrderController | null = null;
+  private _cartController: CartController | null = null;
+  private _productController: ProductController | null = null;
 
   get draftRepository(): PrismaDraftRepository {
     if (!this._draftRepository) {
@@ -118,6 +136,13 @@ class Container {
       this._roleRepository = new PrismaRoleRepository();
     }
     return this._roleRepository;
+  }
+
+  get cartRepository(): PrismaCartRepository {
+    if (!this._cartRepository) {
+      this._cartRepository = new PrismaCartRepository();
+    }
+    return this._cartRepository;
   }
 
   get createDraft(): CreateDraft {
@@ -251,6 +276,58 @@ class Container {
     return this._getLayoutByTemplateId;
   }
 
+  get getCart(): GetCart {
+    if (!this._getCart) {
+      this._getCart = new GetCart({
+        cartRepository: this.cartRepository,
+        productRepository: this.productRepository,
+      });
+    }
+    return this._getCart;
+  }
+
+  get addCartItem(): AddCartItem {
+    if (!this._addCartItem) {
+      this._addCartItem = new AddCartItem({
+        cartRepository: this.cartRepository,
+        draftRepository: this.draftRepository,
+        productRepository: this.productRepository,
+      });
+    }
+    return this._addCartItem;
+  }
+
+  get updateCartItemQuantity(): UpdateCartItemQuantity {
+    if (!this._updateCartItemQuantity) {
+      this._updateCartItemQuantity = new UpdateCartItemQuantity({
+        cartRepository: this.cartRepository,
+      });
+    }
+    return this._updateCartItemQuantity;
+  }
+
+  get removeCartItem(): RemoveCartItem {
+    if (!this._removeCartItem) {
+      this._removeCartItem = new RemoveCartItem({
+        cartRepository: this.cartRepository,
+      });
+    }
+    return this._removeCartItem;
+  }
+
+  get checkoutCart(): CheckoutCart {
+    if (!this._checkoutCart) {
+      this._checkoutCart = new CheckoutCart({
+        cartRepository: this.cartRepository,
+        orderRepository: this.orderRepository,
+        draftRepository: this.draftRepository,
+        productRepository: this.productRepository,
+        productTemplateRepository: this.productTemplateRepository,
+      });
+    }
+    return this._checkoutCart;
+  }
+
   get draftController(): DraftController {
     if (!this._draftController) {
       this._draftController = new DraftController(
@@ -326,6 +403,37 @@ class Container {
     return this._meOrderController;
   }
 
+  get cartController(): CartController {
+    if (!this._cartController) {
+      this._cartController = new CartController(
+        this.getCart,
+        this.addCartItem,
+        this.updateCartItemQuantity,
+        this.removeCartItem,
+        this.checkoutCart
+      );
+    }
+    return this._cartController;
+  }
+
+  get getProductById(): GetProductById {
+    if (!this._getProductById) {
+      this._getProductById = new GetProductById({
+        productRepository: this.productRepository,
+      });
+    }
+    return this._getProductById;
+  }
+
+  get productController(): ProductController {
+    if (!this._productController) {
+      this._productController = new ProductController(
+        this.getProductById
+      );
+    }
+    return this._productController;
+  }
+
   get controllers(): Controllers {
     return {
       draftController: this.draftController,
@@ -336,6 +444,8 @@ class Container {
       userController: this.userController,
       meDraftController: this.meDraftController,
       meOrderController: this.meOrderController,
+      cartController: this.cartController,
+      productController: this.productController,
     };
   }
 
@@ -349,6 +459,7 @@ class Container {
       uploadedImageRepository: this.uploadedImageRepository,
       assetRepository: this.assetRepository,
       roleRepository: this.roleRepository,
+      cartRepository: this.cartRepository,
     };
   }
 }

@@ -26,6 +26,7 @@ export class MeOrderController {
           createdAt: order.createdAt.toISOString(),
           title: order.title,
           coverUrl: order.coverUrl,
+          productName: order.productName,
         }))
       );
     } catch (error) {

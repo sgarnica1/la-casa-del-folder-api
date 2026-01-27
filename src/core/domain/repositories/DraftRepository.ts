@@ -6,6 +6,7 @@ import type {
   UpdateLayoutItemsInput,
   DraftWithImagesForOrder,
   DraftListSummary,
+  DraftWithSelectedOptions,
 } from "../../application/use-cases/drafts/dtos/DraftRepository.dto";
 
 export interface DraftRepository {
@@ -15,6 +16,7 @@ export interface DraftRepository {
   findByIdWithLayoutItems(id: string): Promise<DraftWithLayoutItems | null>;
   findByIdWithLayoutItemsAndImages(id: string): Promise<DraftWithLayoutItemsAndImages | null>;
   findByIdWithImagesForOrder(id: string): Promise<DraftWithImagesForOrder | null>;
+  findByIdWithSelectedOptions(id: string): Promise<DraftWithSelectedOptions | null>;
   update(id: string, updates: Partial<Draft>): Promise<Draft>;
   updateLayoutItems(draftId: string, input: UpdateLayoutItemsInput): Promise<DraftWithLayoutItemsAndImages>;
   markAsOrdered(draftId: string): Promise<void>;
@@ -30,4 +32,5 @@ export type {
   DraftWithImagesForOrder,
   CreateOrderWithDraftUpdateInput,
   DraftListSummary,
+  DraftWithSelectedOptions,
 } from "../../application/use-cases/drafts/dtos/DraftRepository.dto";
