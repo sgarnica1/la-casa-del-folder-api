@@ -25,8 +25,11 @@ COPY . .
 # Build the application
 RUN pnpm run build
 
+# Make start script executable
+RUN chmod +x start.sh
+
 # Expose port
 EXPOSE 8080
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start script that runs migrations then starts the app
+CMD ["./start.sh"]
