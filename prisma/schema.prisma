@@ -120,6 +120,7 @@ model Product {
   optionTypes       ProductOptionType[]
   images            ProductImage[]
   drafts            Draft[]
+  cartItems         CartItem[]
 
   @@map("products")
 }
@@ -286,21 +287,28 @@ model Cart {
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items CartItem[]
 
+  // Note: Partial unique index for active carts only is created via migration
+  // This allows multiple converted carts per user while enforcing one active cart
+  @@index([userId, status])
   @@map("carts")
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
-  cartId    String   @map("cart_id")
-  draftId   String   @map("draft_id")
-  quantity  Int
-  unitPrice Decimal  @db.Decimal(10, 2) @map("unit_price")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(uuid())
+  cartId               String   @map("cart_id")
+  draftId              String   @map("draft_id")
+  productId            String   @map("product_id")
+  quantity             Int      @default(1)
+  unitPrice            Decimal  @db.Decimal(10, 2) @map("unit_price")
+  selectedOptionsSnapshot Json?  @map("selected_options_snapshot")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  cart  Cart  @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  draft Draft @relation(fields: [draftId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  draft   Draft   @relation(fields: [draftId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 
+  @@unique([cartId, draftId])
   @@map("cart_items")
 }
 

@@ -8,6 +8,8 @@ import { createOrderRoutes } from "./orders.routes";
 import { createHealthRoutes } from "./health.routes";
 import { createLayoutRoutes } from "./layouts.routes";
 import { createMeRoutes } from "./me.routes";
+import { createCartRoutes } from "./cart.routes";
+import { createProductRoutes } from "./products.routes";
 import { createUserProvisioningMiddleware } from "../middleware/authMiddleware";
 import { UnauthorizedError } from "../../../domain/errors/DomainErrors";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -30,6 +32,8 @@ export function createRoutes(controllers: Controllers, repositories: Repositorie
   router.use("/assets", requireAuthApi, userProvisioningMiddleware, createAssetRoutes(controllers.assetController));
   router.use("/orders", requireAuthApi, userProvisioningMiddleware, createOrderRoutes(controllers.orderController, repositories.draftRepository));
   router.use("/layouts", createLayoutRoutes(controllers.layoutController));
+  router.use("/cart", requireAuthApi, userProvisioningMiddleware, createCartRoutes(controllers.cartController));
+  router.use("/products", createProductRoutes(controllers.productController));
   router.get("/user/me", requireAuthApi, userProvisioningMiddleware, asyncHandler((req, res, next) => controllers.userController.getCurrentUser(req, res, next)));
   router.use("/user/me", requireAuthApi, userProvisioningMiddleware, createMeRoutes(controllers.meDraftController, controllers.meOrderController));
 

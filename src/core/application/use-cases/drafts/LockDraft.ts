@@ -1,6 +1,7 @@
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { DraftStateEnum } from "../../../domain/entities/Draft";
-import { ConflictError, NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
+import { DraftMutationPolicy } from "../../../domain/policies/DraftMutationPolicy";
+import { NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
 import { LockDraftInputSchema, LockDraftOutput } from "./dtos/LockDraft.dto";
 
 export interface LockDraftDependencies {
@@ -8,7 +9,11 @@ export interface LockDraftDependencies {
 }
 
 export class LockDraft {
-  constructor(private deps: LockDraftDependencies) { }
+  private draftMutationPolicy: DraftMutationPolicy;
+
+  constructor(private deps: LockDraftDependencies) {
+    this.draftMutationPolicy = new DraftMutationPolicy(deps.draftRepository);
+  }
 
   async execute(input: unknown): Promise<LockDraftOutput> {
     const validationResult = LockDraftInputSchema.safeParse(input);
@@ -18,8 +23,9 @@ export class LockDraft {
     }
 
     const validatedInput = validationResult.data;
-    const draft = await this.deps.draftRepository.findById(validatedInput.draftId);
+    await this.draftMutationPolicy.assertCanLock(validatedInput.draftId);
 
+    const draft = await this.deps.draftRepository.findById(validatedInput.draftId);
     if (!draft) {
       throw new NotFoundError("Draft", validatedInput.draftId);
     }
@@ -34,10 +40,6 @@ export class LockDraft {
         createdAt: draft.createdAt,
         updatedAt: draft.updatedAt,
       };
-    }
-
-    if (draft.state === DraftStateEnum.ORDERED) {
-      throw new ConflictError("Cannot lock an already ordered draft");
     }
 
     const updatedDraft = await this.deps.draftRepository.update(validatedInput.draftId, {

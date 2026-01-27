@@ -63,16 +63,18 @@ describe("CreateOrder", () => {
     const orderId = "123e4567-e89b-12d3-a456-426614174003";
     const now = new Date();
 
+    const mockDraft = {
+      id: draftId,
+      userId: "123e4567-e89b-12d3-a456-426614174004",
+      productId,
+      templateId,
+      state: DraftStateEnum.LOCKED,
+      createdAt: now,
+      updatedAt: now,
+    };
+
     const mockDraftWithItems = {
-      draft: {
-        id: draftId,
-        userId: "123e4567-e89b-12d3-a456-426614174004",
-        productId,
-        templateId,
-        state: DraftStateEnum.LOCKED,
-        createdAt: now,
-        updatedAt: now,
-      },
+      draft: mockDraft,
       layoutItems: [
         {
           id: "123e4567-e89b-12d3-a456-426614174005",
@@ -129,6 +131,7 @@ describe("CreateOrder", () => {
       createdAt: now,
     };
 
+    vi.mocked(mockDraftRepository.findById).mockResolvedValue(mockDraft);
     vi.mocked(mockDraftRepository.findByIdWithLayoutItems).mockResolvedValue(mockDraftWithItems);
     vi.mocked(mockProductRepository.findById).mockResolvedValue(mockProduct);
     vi.mocked(mockDraftRepository.findByIdWithImagesForOrder).mockResolvedValue(mockDraftDataForOrder);
@@ -139,6 +142,7 @@ describe("CreateOrder", () => {
     expect(result.id).toBe(orderId);
     expect(result.draftId).toBe(draftId);
     expect(result.state).toBe(OrderState.PENDING);
+    expect(mockDraftRepository.findById).toHaveBeenCalledWith(draftId);
     expect(mockDraftRepository.findByIdWithLayoutItems).toHaveBeenCalledWith(draftId);
     expect(mockProductRepository.findById).toHaveBeenCalledWith(productId);
     expect(mockDraftRepository.findByIdWithImagesForOrder).toHaveBeenCalledWith(draftId);
@@ -159,48 +163,59 @@ describe("CreateOrder", () => {
     const draftId = "123e4567-e89b-12d3-a456-426614174000";
     const now = new Date();
 
+    const mockDraft = {
+      id: draftId,
+      userId: "123e4567-e89b-12d3-a456-426614174004",
+      productId: "123e4567-e89b-12d3-a456-426614174001",
+      templateId: "123e4567-e89b-12d3-a456-426614174002",
+      state: DraftStateEnum.EDITING,
+      createdAt: now,
+      updatedAt: now,
+    };
+
     const mockDraftWithItems = {
-      draft: {
-        id: draftId,
-        userId: "123e4567-e89b-12d3-a456-426614174004",
-        productId: "123e4567-e89b-12d3-a456-426614174001",
-        templateId: "123e4567-e89b-12d3-a456-426614174002",
-        state: DraftStateEnum.EDITING,
-        createdAt: now,
-        updatedAt: now,
-      },
+      draft: mockDraft,
       layoutItems: [],
     };
 
+    vi.mocked(mockDraftRepository.findById).mockResolvedValue(mockDraft);
     vi.mocked(mockDraftRepository.findByIdWithLayoutItems).mockResolvedValue(mockDraftWithItems);
 
     await expect(createOrder.execute({ draftId })).rejects.toThrow(ConflictError);
+    expect(mockDraftRepository.findById).toHaveBeenCalledWith(draftId);
     expect(mockDraftRepository.findByIdWithLayoutItems).toHaveBeenCalledWith(draftId);
     expect(mockOrderRepository.createWithDraftUpdate).not.toHaveBeenCalled();
   });
 
   it("should throw NotFoundError when product does not exist", async () => {
     const draftId = "123e4567-e89b-12d3-a456-426614174000";
+    const productId = "123e4567-e89b-12d3-a456-426614174001";
+    const templateId = "123e4567-e89b-12d3-a456-426614174002";
     const now = new Date();
 
+    const mockDraft = {
+      id: draftId,
+      userId: "123e4567-e89b-12d3-a456-426614174004",
+      productId,
+      templateId,
+      state: DraftStateEnum.LOCKED,
+      createdAt: now,
+      updatedAt: now,
+    };
+
     const mockDraftWithItems = {
-      draft: {
-        id: draftId,
-        userId: "123e4567-e89b-12d3-a456-426614174004",
-        productId: "123e4567-e89b-12d3-a456-426614174001",
-        templateId: "123e4567-e89b-12d3-a456-426614174002",
-        state: DraftStateEnum.LOCKED,
-        createdAt: now,
-        updatedAt: now,
-      },
+      draft: mockDraft,
       layoutItems: [],
     };
 
+    vi.mocked(mockDraftRepository.findById).mockResolvedValue(mockDraft);
     vi.mocked(mockDraftRepository.findByIdWithLayoutItems).mockResolvedValue(mockDraftWithItems);
     vi.mocked(mockProductRepository.findById).mockResolvedValue(null);
 
     await expect(createOrder.execute({ draftId })).rejects.toThrow(NotFoundError);
-    expect(mockProductRepository.findById).toHaveBeenCalledWith("123e4567-e89b-12d3-a456-426614174001");
+    expect(mockDraftRepository.findById).toHaveBeenCalledWith(draftId);
+    expect(mockDraftRepository.findByIdWithLayoutItems).toHaveBeenCalledWith(draftId);
+    expect(mockProductRepository.findById).toHaveBeenCalledWith(productId);
     expect(mockOrderRepository.createWithDraftUpdate).not.toHaveBeenCalled();
   });
 });
