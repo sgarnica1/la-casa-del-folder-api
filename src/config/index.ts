@@ -11,4 +11,9 @@ export const config = {
     apiKey: process.env.CLOUDINARY_API_KEY || "",
     apiSecret: process.env.CLOUDINARY_API_SECRET || "",
   },
+  mercadoPago: {
+    accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || "",
+    publicKey: process.env.MERCADO_PAGO_PUBLIC_KEY || "",
+    webhookSecret: process.env.MERCADO_PAGO_WEBHOOK_SECRET || "",
+  },
 };

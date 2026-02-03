@@ -8,6 +8,8 @@ import { MeDraftController } from "./MeDraftController";
 import { MeOrderController } from "./MeOrderController";
 import { CartController } from "./CartController";
 import { ProductController } from "./ProductController";
+import { PaymentController } from "./PaymentController";
+import { WebhookController } from "./WebhookController";
 
 export interface Controllers {
   draftController: DraftController;
@@ -20,4 +22,6 @@ export interface Controllers {
   meOrderController: MeOrderController;
   cartController: CartController;
   productController: ProductController;
+  paymentController: PaymentController;
+  webhookController: WebhookController;
 }
