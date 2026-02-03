@@ -46,11 +46,12 @@ function createApp(controllers: Controllers, repositories: Repositories): expres
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  app.use(
-    clerkMiddleware({
-      publicRoutes: ["/api/payments/webhook"],
-    })
-  );
+  app.use((req, res, next) => {
+    if (req.path === "/api/payments/webhook") {
+      return next();
+    }
+    return clerkMiddleware()(req, res, next);
+  });
 
   app.use(requestLogger);
 
