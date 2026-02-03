@@ -39,14 +39,18 @@ function createApp(controllers: Controllers, repositories: Repositories): expres
       },
       credentials: true,
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-signature", "x-request-id"],
     })
   );
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  app.use(clerkMiddleware());
+  app.use(
+    clerkMiddleware({
+      publicRoutes: ["/api/payments/webhook"],
+    })
+  );
 
   app.use(requestLogger);
 

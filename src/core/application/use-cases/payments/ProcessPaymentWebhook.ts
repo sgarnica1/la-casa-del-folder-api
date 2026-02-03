@@ -43,7 +43,16 @@ export class ProcessPaymentWebhook {
       throw new ValidationError("Payment ID is missing from notification");
     }
 
-    const payment = await this.paymentClient.get({ id: paymentId });
+    let payment;
+    try {
+      payment = await this.paymentClient.get({ id: paymentId });
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        console.log(`Test notification received for payment ${paymentId} (payment not found - this is expected for test notifications)`);
+        return;
+      }
+      throw error;
+    }
 
     if (!payment.external_reference) {
       throw new ValidationError("External reference (order ID) is missing from payment");
