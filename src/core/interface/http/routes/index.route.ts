@@ -10,6 +10,7 @@ import { createLayoutRoutes } from "./layouts.routes";
 import { createMeRoutes } from "./me.routes";
 import { createCartRoutes } from "./cart.routes";
 import { createProductRoutes } from "./products.routes";
+import { createPaymentRoutes } from "./payments.routes";
 import { createUserProvisioningMiddleware } from "../middleware/authMiddleware";
 import { UnauthorizedError } from "../../../domain/errors/DomainErrors";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -34,6 +35,7 @@ export function createRoutes(controllers: Controllers, repositories: Repositorie
   router.use("/layouts", createLayoutRoutes(controllers.layoutController));
   router.use("/cart", requireAuthApi, userProvisioningMiddleware, createCartRoutes(controllers.cartController));
   router.use("/products", createProductRoutes(controllers.productController));
+  router.use("/payments", createPaymentRoutes(controllers.paymentController, controllers.webhookController, repositories));
   router.get("/user/me", requireAuthApi, userProvisioningMiddleware, asyncHandler((req, res, next) => controllers.userController.getCurrentUser(req, res, next)));
   router.use("/user/me", requireAuthApi, userProvisioningMiddleware, createMeRoutes(controllers.meDraftController, controllers.meOrderController));
 
