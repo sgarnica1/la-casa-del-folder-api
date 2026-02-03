@@ -30,7 +30,7 @@ export class PrismaOrderRepository implements OrderRepository {
           data: {
             userId: input.userId,
             totalAmount: input.totalAmount,
-            paymentStatus: "paid",
+            paymentStatus: "pending",
             orderStatus: "new",
             shippingAddressJson: {},
             items: {
@@ -46,11 +46,6 @@ export class PrismaOrderRepository implements OrderRepository {
           include: {
             items: true,
           },
-        });
-
-        await tx.draft.update({
-          where: { id: input.draftId },
-          data: { status: "ordered" },
         });
 
         return order;
@@ -77,7 +72,7 @@ export class PrismaOrderRepository implements OrderRepository {
           data: {
             userId: input.userId,
             totalAmount: input.totalAmount,
-            paymentStatus: "paid",
+            paymentStatus: "pending",
             orderStatus: "new",
             shippingAddressJson: {},
             items: {
@@ -93,15 +88,6 @@ export class PrismaOrderRepository implements OrderRepository {
           include: {
             items: true,
           },
-        });
-
-        await tx.draft.updateMany({
-          where: {
-            id: {
-              in: input.draftIds,
-            },
-          },
-          data: { status: "ordered" },
         });
 
         return order;
@@ -417,5 +403,41 @@ export class PrismaOrderRepository implements OrderRepository {
         updatedAt: item.updatedAt,
       })),
     };
+  }
+
+  async updatePaymentStatus(orderId: string, paymentStatus: "pending" | "paid" | "failed"): Promise<void> {
+    try {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { paymentStatus },
+      });
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
+
+  async getDraftIdsFromOrder(orderId: string): Promise<string[]> {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (!order) {
+        return [];
+      }
+
+      const draftIds = new Set<string>();
+      for (const item of order.items) {
+        const designSnapshot = item.designSnapshotJson as { draftId?: string } | null;
+        if (designSnapshot?.draftId) {
+          draftIds.add(designSnapshot.draftId);
+        }
+      }
+
+      return Array.from(draftIds);
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
   }
 }

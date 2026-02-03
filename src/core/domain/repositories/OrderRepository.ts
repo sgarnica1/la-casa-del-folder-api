@@ -17,6 +17,8 @@ export interface OrderRepository {
   findById(id: string): Promise<OrderWithItems | null>;
   findOrdersByUser(userId: string): Promise<OrderListSummary[]>;
   findOrderByIdAndUser(id: string, userId: string): Promise<OrderWithItems | null>;
+  updatePaymentStatus(orderId: string, paymentStatus: "pending" | "paid" | "failed"): Promise<void>;
+  getDraftIdsFromOrder(orderId: string): Promise<string[]>;
 }
 
 export type {

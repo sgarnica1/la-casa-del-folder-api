@@ -8,6 +8,8 @@ import { MeDraftController } from "./interface/http/controllers/MeDraftControlle
 import { MeOrderController } from "./interface/http/controllers/MeOrderController";
 import { CartController } from "./interface/http/controllers/CartController";
 import { ProductController } from "./interface/http/controllers/ProductController";
+import { PaymentController } from "./interface/http/controllers/PaymentController";
+import { WebhookController } from "./interface/http/controllers/WebhookController";
 import type { Controllers } from "./interface/http/controllers";
 import { CreateDraft } from "./application/use-cases/drafts/CreateDraft";
 import { GetDraftById } from "./application/use-cases/drafts/GetDraftById";
@@ -29,6 +31,8 @@ import { UpdateCartItemQuantity } from "./application/use-cases/cart/UpdateCartI
 import { RemoveCartItem } from "./application/use-cases/cart/RemoveCartItem";
 import { CheckoutCart } from "./application/use-cases/cart/CheckoutCart";
 import { GetProductById } from "./application/use-cases/products/GetProductById";
+import { CreatePaymentPreference } from "./application/use-cases/payments/CreatePaymentPreference";
+import { ProcessPaymentWebhook } from "./application/use-cases/payments/ProcessPaymentWebhook";
 import { PrismaDraftRepository } from "./infrastructure/repositories/PrismaDraftRepository";
 import { PrismaAssetRepository } from "./infrastructure/repositories/PrismaAssetRepository";
 import { PrismaUploadedImageRepository } from "./infrastructure/repositories/PrismaUploadedImageRepository";
@@ -70,6 +74,8 @@ class Container {
   private _removeCartItem: RemoveCartItem | null = null;
   private _checkoutCart: CheckoutCart | null = null;
   private _getProductById: GetProductById | null = null;
+  private _createPaymentPreference: CreatePaymentPreference | null = null;
+  private _processPaymentWebhook: ProcessPaymentWebhook | null = null;
 
   private _draftController: DraftController | null = null;
   private _assetController: AssetController | null = null;
@@ -81,6 +87,8 @@ class Container {
   private _meOrderController: MeOrderController | null = null;
   private _cartController: CartController | null = null;
   private _productController: ProductController | null = null;
+  private _paymentController: PaymentController | null = null;
+  private _webhookController: WebhookController | null = null;
 
   get draftRepository(): PrismaDraftRepository {
     if (!this._draftRepository) {
@@ -434,6 +442,43 @@ class Container {
     return this._productController;
   }
 
+  get createPaymentPreference(): CreatePaymentPreference {
+    if (!this._createPaymentPreference) {
+      this._createPaymentPreference = new CreatePaymentPreference({
+        orderRepository: this.orderRepository,
+      });
+    }
+    return this._createPaymentPreference;
+  }
+
+  get paymentController(): PaymentController {
+    if (!this._paymentController) {
+      this._paymentController = new PaymentController(
+        this.createPaymentPreference
+      );
+    }
+    return this._paymentController;
+  }
+
+  get processPaymentWebhook(): ProcessPaymentWebhook {
+    if (!this._processPaymentWebhook) {
+      this._processPaymentWebhook = new ProcessPaymentWebhook({
+        orderRepository: this.orderRepository,
+        draftRepository: this.draftRepository,
+      });
+    }
+    return this._processPaymentWebhook;
+  }
+
+  get webhookController(): WebhookController {
+    if (!this._webhookController) {
+      this._webhookController = new WebhookController(
+        this.processPaymentWebhook
+      );
+    }
+    return this._webhookController;
+  }
+
   get controllers(): Controllers {
     return {
       draftController: this.draftController,
@@ -446,6 +491,8 @@ class Container {
       meOrderController: this.meOrderController,
       cartController: this.cartController,
       productController: this.productController,
+      paymentController: this.paymentController,
+      webhookController: this.webhookController,
     };
   }
 
