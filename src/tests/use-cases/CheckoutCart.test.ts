@@ -5,8 +5,11 @@ import { OrderRepository } from "../../core/domain/repositories/OrderRepository"
 import { DraftRepository } from "../../core/domain/repositories/DraftRepository";
 import { ProductRepository } from "../../core/domain/repositories/ProductRepository";
 import { ProductTemplateRepository } from "../../core/domain/repositories/ProductTemplateRepository";
+import { UserAddressRepository } from "../../core/domain/repositories/UserAddressRepository";
+import { UserRepository } from "../../core/domain/repositories/UserRepository";
 import { DraftStateEnum } from "../../core/domain/entities/Draft";
 import { OrderState } from "../../core/domain/entities/Order";
+import { CartStatusEnum } from "../../core/domain/entities/Cart";
 import {
   NotFoundError,
   ConflictError,
@@ -30,6 +33,8 @@ describe("CheckoutCart", () => {
   let mockDraftRepository: DraftRepository;
   let mockProductRepository: ProductRepository;
   let mockProductTemplateRepository: ProductTemplateRepository;
+  let mockUserAddressRepository: UserAddressRepository;
+  let mockUserRepository: UserRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,6 +47,7 @@ describe("CheckoutCart", () => {
 
     mockOrderRepository = {
       createWithItemsAndDraftUpdate: vi.fn(),
+      findPendingOrderByCartId: vi.fn().mockResolvedValue(null),
     } as unknown as OrderRepository;
 
     mockDraftRepository = {
@@ -58,12 +64,33 @@ describe("CheckoutCart", () => {
       findLayoutItemsByTemplateId: vi.fn(),
     } as unknown as ProductTemplateRepository;
 
+    mockUserAddressRepository = {
+      findById: vi.fn(),
+    } as unknown as UserAddressRepository;
+
+    mockUserRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        clerkId: "user_123",
+        email: "test@example.com",
+        firstName: null,
+        lastName: null,
+        phone: null,
+        roleId: "123e4567-e89b-12d3-a456-426614174010",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      update: vi.fn().mockResolvedValue(undefined),
+    } as unknown as UserRepository;
+
     checkoutCart = new CheckoutCart({
       cartRepository: mockCartRepository,
       orderRepository: mockOrderRepository,
       draftRepository: mockDraftRepository,
       productRepository: mockProductRepository,
       productTemplateRepository: mockProductTemplateRepository,
+      userAddressRepository: mockUserAddressRepository,
+      userRepository: mockUserRepository,
     });
   });
 
@@ -80,7 +107,7 @@ describe("CheckoutCart", () => {
       cart: {
         id: cartId,
         userId,
-        status: "active" as const,
+        status: CartStatusEnum.ACTIVE,
         createdAt: now,
         updatedAt: now,
       },
@@ -180,8 +207,10 @@ describe("CheckoutCart", () => {
     expect(result.state).toBe(OrderState.PENDING);
     expect(mockCartRepository.findActiveCartByUserId).toHaveBeenCalledWith(userId);
     expect(mockOrderRepository.createWithItemsAndDraftUpdate).toHaveBeenCalled();
-    expect(mockCartRepository.markCartAsConverted).toHaveBeenCalledWith(cartId);
-    expect(mockCartRepository.clearCart).toHaveBeenCalledWith(cartId);
+    // Cart is no longer marked as converted - it stays active until payment is confirmed
+    expect(mockCartRepository.markCartAsConverted).not.toHaveBeenCalled();
+    // Cart is not cleared here - it's cleared by webhook when payment is confirmed
+    expect(mockCartRepository.clearCart).not.toHaveBeenCalled();
   });
 
   it("should auto-lock editing draft before checkout", async () => {
@@ -197,7 +226,7 @@ describe("CheckoutCart", () => {
       cart: {
         id: cartId,
         userId,
-        status: "active" as const,
+        status: CartStatusEnum.ACTIVE,
         createdAt: now,
         updatedAt: now,
       },
@@ -296,7 +325,7 @@ describe("CheckoutCart", () => {
       cart: {
         id: cartId,
         userId,
-        status: "active" as const,
+        status: CartStatusEnum.ACTIVE,
         createdAt: now,
         updatedAt: now,
       },
@@ -321,7 +350,7 @@ describe("CheckoutCart", () => {
       cart: {
         id: cartId,
         userId,
-        status: "active" as const,
+        status: CartStatusEnum.ACTIVE,
         createdAt: now,
         updatedAt: now,
       },
@@ -361,7 +390,7 @@ describe("CheckoutCart", () => {
       cart: {
         id: cartId,
         userId,
-        status: "active" as const,
+        status: CartStatusEnum.ACTIVE,
         createdAt: now,
         updatedAt: now,
       },

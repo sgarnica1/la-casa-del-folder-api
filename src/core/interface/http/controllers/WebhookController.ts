@@ -9,6 +9,19 @@ export class WebhookController {
   ) { }
 
   async handleWebhook(req: Request, res: Response, _next: NextFunction): Promise<void> {
+    console.log("[WebhookController] Webhook received", {
+      method: req.method,
+      path: req.path,
+      headers: {
+        "x-signature": req.headers["x-signature"],
+        "x-request-id": req.headers["x-request-id"],
+        "content-type": req.headers["content-type"],
+        origin: req.headers.origin,
+      },
+      query: req.query,
+      body: req.body,
+    });
+
     try {
       const xSignature = req.headers["x-signature"] as string;
       const xRequestId = req.headers["x-request-id"] as string;

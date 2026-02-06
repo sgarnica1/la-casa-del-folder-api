@@ -23,8 +23,6 @@ export const OrderCustomerSchema = z.object({
 export type OrderCustomer = z.infer<typeof OrderCustomerSchema>;
 
 export const OrderAddressSchema = z.object({
-  name: z.string(),
-  phone: z.string().nullable(),
   addressLine1: z.string(),
   addressLine2: z.string().nullable(),
   city: z.string(),
@@ -74,9 +72,11 @@ export type CreateOrderItemInput = z.infer<typeof CreateOrderItemInputSchema>;
 
 export const CreateOrderWithItemsInputSchema = z.object({
   userId: z.uuid(),
+  cartId: z.uuid().optional(),
   totalAmount: z.number(),
   items: z.array(CreateOrderItemInputSchema),
   draftIds: z.array(z.uuid()),
+  shippingAddressJson: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type CreateOrderWithItemsInput = z.infer<typeof CreateOrderWithItemsInputSchema>;
