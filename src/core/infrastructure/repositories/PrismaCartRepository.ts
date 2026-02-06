@@ -216,4 +216,38 @@ export class PrismaCartRepository implements CartRepository {
       throw mapPrismaError(error);
     }
   }
+
+  async findCartByOrderId(orderId: string): Promise<Cart | null> {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { cart: true },
+      });
+
+      if (!order || !order.cart) {
+        return null;
+      }
+
+      return {
+        id: order.cart.id,
+        userId: order.cart.userId,
+        status: order.cart.status as CartStatusEnum,
+        createdAt: order.cart.createdAt,
+        updatedAt: order.cart.updatedAt,
+      };
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
+
+  async clearCartByOrderId(orderId: string): Promise<void> {
+    try {
+      const cart = await this.findCartByOrderId(orderId);
+      if (cart) {
+        await this.clearCart(cart.id);
+      }
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
 }

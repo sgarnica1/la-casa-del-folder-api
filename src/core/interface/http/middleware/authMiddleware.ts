@@ -53,6 +53,9 @@ export function createUserProvisioningMiddleware(userRepository: UserRepository,
         user = await userRepository.create({
           clerkId: clerkUserId,
           email: primaryEmail.emailAddress,
+          firstName: clerkUser.firstName || null,
+          lastName: clerkUser.lastName || null,
+          phone: clerkUser.phoneNumbers?.[0]?.phoneNumber || null,
           roleId: role.id,
         });
       }

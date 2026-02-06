@@ -58,6 +58,7 @@ model User {
   email     String
   firstName String?  @map("first_name")
   lastName  String?  @map("last_name")
+  phone     String?  @map("phone")
   roleId    String   @map("role_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -75,8 +76,6 @@ model User {
 model UserAddress {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
-  name         String
-  phone        String?
   addressLine1 String   @map("address_line_1")
   addressLine2 String?  @map("address_line_2")
   city         String
@@ -284,8 +283,9 @@ model Cart {
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 
-  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items CartItem[]
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  CartItem[]
+  orders Order[]
 
   // Note: Partial unique index for active carts only is created via migration
   // This allows multiple converted carts per user while enforcing one active cart
@@ -315,6 +315,7 @@ model CartItem {
 model Order {
   id                 String        @id @default(uuid())
   userId             String        @map("user_id")
+  cartId             String?       @map("cart_id")
   totalAmount        Decimal       @db.Decimal(10, 2) @map("total_amount")
   paymentStatus      PaymentStatus @map("payment_status")
   orderStatus        OrderStatus   @map("order_status")
@@ -323,6 +324,7 @@ model Order {
   updatedAt          DateTime      @updatedAt @map("updated_at")
 
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cart  Cart?       @relation(fields: [cartId], references: [id])
   items OrderItem[]
 
   @@map("orders")

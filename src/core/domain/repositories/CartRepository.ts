@@ -14,6 +14,8 @@ export interface CartRepository {
   removeCartItem(id: string, userId: string): Promise<void>;
   clearCart(cartId: string): Promise<void>;
   markCartAsConverted(cartId: string): Promise<void>;
+  findCartByOrderId(orderId: string): Promise<Cart | null>;
+  clearCartByOrderId(orderId: string): Promise<void>;
 }
 
 export type {

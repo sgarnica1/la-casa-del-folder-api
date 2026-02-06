@@ -3,6 +3,9 @@ import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { ProductRepository } from "../../../domain/repositories/ProductRepository";
 import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
+import { UserAddressRepository } from "../../../domain/repositories/UserAddressRepository";
+import { UserRepository } from "../../../domain/repositories/UserRepository";
+import { User } from "../../../domain/entities/User";
 import { DraftMutationPolicy } from "../../../domain/policies/DraftMutationPolicy";
 import { DraftStateEnum } from "../../../domain/entities/Draft";
 import {
@@ -19,6 +22,25 @@ export interface CheckoutCartDependencies {
   draftRepository: DraftRepository;
   productRepository: ProductRepository;
   productTemplateRepository: ProductTemplateRepository;
+  userAddressRepository: UserAddressRepository;
+  userRepository: UserRepository;
+}
+
+export interface CheckoutCartInput {
+  shippingAddressId?: string;
+  shippingAddressData?: {
+    addressLine1: string;
+    addressLine2?: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  customerData?: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+  };
 }
 
 export class CheckoutCart {
@@ -28,7 +50,7 @@ export class CheckoutCart {
     this.draftMutationPolicy = new DraftMutationPolicy(deps.draftRepository);
   }
 
-  async execute(userId: string): Promise<CheckoutCartOutput> {
+  async execute(userId: string, input?: CheckoutCartInput): Promise<CheckoutCartOutput> {
     console.log('[CheckoutCart] Starting checkout for user:', userId);
 
     const cartWithItems = await this.deps.cartRepository.findActiveCartByUserId(userId);
@@ -46,6 +68,18 @@ export class CheckoutCart {
     if (cartWithItems.items.length === 0) {
       console.error('[CheckoutCart] Cart is empty');
       throw new UnprocessableEntityError("Cart is empty");
+    }
+
+    // Check if there's already a pending order for this cart
+    const existingOrder = await this.deps.orderRepository.findPendingOrderByCartId(cartWithItems.cart.id);
+    if (existingOrder) {
+      console.log('[CheckoutCart] Pending order already exists for this cart:', existingOrder.id);
+      return {
+        id: existingOrder.id,
+        draftId: existingOrder.draftId,
+        state: existingOrder.state,
+        createdAt: existingOrder.createdAt,
+      };
     }
 
     const draftIds = cartWithItems.items.map((item) => item.draftId);
@@ -177,15 +211,81 @@ export class CheckoutCart {
       })
     );
 
+    let shippingAddressJson: Record<string, unknown> = {};
+
+    const user = await this.deps.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError("User", userId);
+    }
+
+    if (input?.shippingAddressId) {
+      const address = await this.deps.userAddressRepository.findById(input.shippingAddressId, userId);
+      if (!address) {
+        throw new NotFoundError("Address", input.shippingAddressId);
+      }
+      shippingAddressJson = {
+        addressId: address.id,
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2,
+        city: address.city,
+        state: address.state,
+        postalCode: address.postalCode,
+        country: address.country,
+      };
+    } else if (input?.shippingAddressData) {
+      shippingAddressJson = {
+        addressLine1: input.shippingAddressData.addressLine1,
+        addressLine2: input.shippingAddressData.addressLine2 || null,
+        city: input.shippingAddressData.city,
+        state: input.shippingAddressData.state,
+        postalCode: input.shippingAddressData.postalCode,
+        country: input.shippingAddressData.country,
+      };
+    }
+
+    // Update user data if provided
+    const userUpdates: Partial<Pick<User, "firstName" | "lastName" | "phone">> = {};
+    if (input?.customerData?.firstName) {
+      userUpdates.firstName = input.customerData.firstName;
+    }
+    if (input?.customerData?.lastName) {
+      userUpdates.lastName = input.customerData.lastName;
+    }
+    if (input?.customerData?.phone) {
+      userUpdates.phone = input.customerData.phone;
+    }
+
+    if (Object.keys(userUpdates).length > 0) {
+      await this.deps.userRepository.update(userId, userUpdates);
+    }
+
+    // Get updated user data for snapshot
+    const updatedUser = await this.deps.userRepository.findById(userId);
+    if (!updatedUser) {
+      throw new NotFoundError("User", userId);
+    }
+
+    shippingAddressJson = {
+      ...shippingAddressJson,
+      customer: {
+        firstName: updatedUser.firstName || null,
+        lastName: updatedUser.lastName || null,
+        email: updatedUser.email,
+        phone: updatedUser.phone || null,
+      },
+    };
+
     const order = await this.deps.orderRepository.createWithItemsAndDraftUpdate({
       userId,
+      cartId: cartWithItems.cart.id,
       totalAmount: cartWithItems.total,
       items: orderItems,
       draftIds,
+      shippingAddressJson,
     });
 
-    await this.deps.cartRepository.markCartAsConverted(cartWithItems.cart.id);
-    await this.deps.cartRepository.clearCart(cartWithItems.cart.id);
+    // Don't mark cart as converted here - keep it active until payment is confirmed via webhook
+    // The webhook will clear the cart when payment status becomes "paid"
 
     return {
       id: order.id,

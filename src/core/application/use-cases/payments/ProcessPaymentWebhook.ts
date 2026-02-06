@@ -1,5 +1,6 @@
 import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
+import { CartRepository } from "../../../domain/repositories/CartRepository";
 import { NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
 import { Payment } from "mercadopago";
 import { MercadoPagoConfig } from "mercadopago";
@@ -8,6 +9,7 @@ import { config } from "../../../../config";
 export interface ProcessPaymentWebhookDependencies {
   orderRepository: OrderRepository;
   draftRepository: DraftRepository;
+  cartRepository: CartRepository;
 }
 
 export interface PaymentWebhookNotification {
@@ -43,7 +45,16 @@ export class ProcessPaymentWebhook {
       throw new ValidationError("Payment ID is missing from notification");
     }
 
-    const payment = await this.paymentClient.get({ id: paymentId });
+    let payment;
+    try {
+      payment = await this.paymentClient.get({ id: paymentId });
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        console.log(`Test notification received for payment ${paymentId} (payment not found - this is expected for test notifications)`);
+        return;
+      }
+      throw error;
+    }
 
     if (!payment.external_reference) {
       throw new ValidationError("External reference (order ID) is missing from payment");
@@ -89,6 +100,9 @@ export class ProcessPaymentWebhook {
           await this.deps.draftRepository.markAsOrdered(draftId);
         }
         console.log(`All drafts marked as ordered for order ${orderId}`);
+
+        await this.deps.cartRepository.clearCartByOrderId(orderId);
+        console.log(`Cart cleared for order ${orderId}`);
       }
     }
   }

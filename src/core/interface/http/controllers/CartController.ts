@@ -215,7 +215,35 @@ export class CartController {
     try {
       const userId = req.userAuth.userId;
       console.log('[CartController] Checkout request received for user:', userId);
-      const result = await this.checkoutCart.execute(userId);
+      
+      const {
+        shippingAddressId,
+        shippingAddressData,
+        customerData,
+      } = req.body as {
+        shippingAddressId?: string;
+        shippingAddressData?: {
+          name: string;
+          phone?: string | null;
+          addressLine1: string;
+          addressLine2?: string | null;
+          city: string;
+          state: string;
+          postalCode: string;
+          country: string;
+        };
+        customerData?: {
+          firstName?: string;
+          lastName?: string;
+          phone?: string;
+        };
+      };
+
+      const result = await this.checkoutCart.execute(userId, {
+        shippingAddressId,
+        shippingAddressData,
+        customerData,
+      });
       console.log('[CartController] Checkout successful, order created:', result.id);
 
       res.status(201).json({

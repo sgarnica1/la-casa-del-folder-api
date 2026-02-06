@@ -71,10 +71,11 @@ export class PrismaOrderRepository implements OrderRepository {
         const order = await tx.order.create({
           data: {
             userId: input.userId,
+            cartId: input.cartId || null,
             totalAmount: input.totalAmount,
             paymentStatus: "pending",
             orderStatus: "new",
-            shippingAddressJson: {},
+            shippingAddressJson: (input.shippingAddressJson || {}) as Prisma.InputJsonValue,
             items: {
               create: input.items.map((item) => ({
                 productNameSnapshot: item.productName,
@@ -93,7 +94,7 @@ export class PrismaOrderRepository implements OrderRepository {
         return order;
       });
 
-      const firstItem = result.items[0];
+      const firstItem = result.items?.[0];
       const designSnapshot = firstItem?.designSnapshotJson as { draftId?: string } | null;
 
       return {
@@ -144,8 +145,6 @@ export class PrismaOrderRepository implements OrderRepository {
           lastName: order.user.lastName,
         },
         address: defaultAddress ? {
-          name: defaultAddress.name,
-          phone: defaultAddress.phone,
           addressLine1: defaultAddress.addressLine1,
           addressLine2: defaultAddress.addressLine2,
           city: defaultAddress.city,
@@ -218,8 +217,6 @@ export class PrismaOrderRepository implements OrderRepository {
             lastName: order.user.lastName,
           },
           address: defaultAddress ? {
-            name: defaultAddress.name,
-            phone: defaultAddress.phone,
             addressLine1: defaultAddress.addressLine1,
             addressLine2: defaultAddress.addressLine2,
             city: defaultAddress.city,
@@ -284,8 +281,6 @@ export class PrismaOrderRepository implements OrderRepository {
         lastName: prismaOrder.user.lastName,
       },
       address: defaultAddress ? {
-        name: defaultAddress.name,
-        phone: defaultAddress.phone,
         addressLine1: defaultAddress.addressLine1,
         addressLine2: defaultAddress.addressLine2,
         city: defaultAddress.city,
@@ -383,8 +378,6 @@ export class PrismaOrderRepository implements OrderRepository {
         lastName: prismaOrder.user.lastName,
       },
       address: defaultAddress ? {
-        name: defaultAddress.name,
-        phone: defaultAddress.phone,
         addressLine1: defaultAddress.addressLine1,
         addressLine2: defaultAddress.addressLine2,
         city: defaultAddress.city,
@@ -439,5 +432,33 @@ export class PrismaOrderRepository implements OrderRepository {
     } catch (error) {
       throw mapPrismaError(error);
     }
+  }
+
+  async findPendingOrderByCartId(cartId: string): Promise<Order | null> {
+    const order = await prisma.order.findFirst({
+      where: {
+        cartId,
+        paymentStatus: "pending",
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    // Get draftId from the first order item's design snapshot
+    const firstItem = order.items[0];
+    const designSnapshot = firstItem?.designSnapshotJson as { draftId?: string } | null;
+    const draftId = designSnapshot?.draftId || "";
+
+    return {
+      id: order.id,
+      draftId,
+      state: OrderState.PENDING,
+      createdAt: order.createdAt,
+    };
   }
 }
