@@ -1,5 +1,6 @@
 import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
+import { CartRepository } from "../../../domain/repositories/CartRepository";
 import { NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
 import { Payment } from "mercadopago";
 import { MercadoPagoConfig } from "mercadopago";
@@ -8,6 +9,7 @@ import { config } from "../../../../config";
 export interface ProcessPaymentWebhookDependencies {
   orderRepository: OrderRepository;
   draftRepository: DraftRepository;
+  cartRepository: CartRepository;
 }
 
 export interface PaymentWebhookNotification {
@@ -98,6 +100,9 @@ export class ProcessPaymentWebhook {
           await this.deps.draftRepository.markAsOrdered(draftId);
         }
         console.log(`All drafts marked as ordered for order ${orderId}`);
+
+        await this.deps.cartRepository.clearCartByOrderId(orderId);
+        console.log(`Cart cleared for order ${orderId}`);
       }
     }
   }

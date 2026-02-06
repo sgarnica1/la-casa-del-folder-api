@@ -16,8 +16,6 @@ export const OrderCustomerSchema = z.object({
 export type OrderCustomer = z.infer<typeof OrderCustomerSchema>;
 
 export const OrderAddressSchema = z.object({
-  name: z.string(),
-  phone: z.string().nullable(),
   addressLine1: z.string(),
   addressLine2: z.string().nullable(),
   city: z.string(),

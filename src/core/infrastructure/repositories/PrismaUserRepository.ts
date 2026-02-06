@@ -17,6 +17,9 @@ export class PrismaUserRepository implements UserRepository {
       id: user.id,
       clerkId: user.clerkId,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
       roleId: user.roleId,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -36,6 +39,9 @@ export class PrismaUserRepository implements UserRepository {
       id: user.id,
       clerkId: user.clerkId,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
       roleId: user.roleId,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -48,6 +54,9 @@ export class PrismaUserRepository implements UserRepository {
         data: {
           clerkId: user.clerkId,
           email: user.email,
+          firstName: user.firstName || null,
+          lastName: user.lastName || null,
+          phone: user.phone || null,
           roleId: user.roleId,
         },
       });
@@ -56,9 +65,39 @@ export class PrismaUserRepository implements UserRepository {
         id: created.id,
         clerkId: created.clerkId,
         email: created.email,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        phone: created.phone,
         roleId: created.roleId,
         createdAt: created.createdAt,
         updatedAt: created.updatedAt,
+      };
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
+
+  async update(id: string, updates: Partial<Pick<User, "firstName" | "lastName" | "phone">>): Promise<User> {
+    try {
+      const updated = await prisma.user.update({
+        where: { id },
+        data: {
+          ...(updates.firstName !== undefined && { firstName: updates.firstName }),
+          ...(updates.lastName !== undefined && { lastName: updates.lastName }),
+          ...(updates.phone !== undefined && { phone: updates.phone }),
+        },
+      });
+
+      return {
+        id: updated.id,
+        clerkId: updated.clerkId,
+        email: updated.email,
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        phone: updated.phone,
+        roleId: updated.roleId,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
       };
     } catch (error) {
       throw mapPrismaError(error);

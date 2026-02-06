@@ -10,6 +10,7 @@ import { CartController } from "./interface/http/controllers/CartController";
 import { ProductController } from "./interface/http/controllers/ProductController";
 import { PaymentController } from "./interface/http/controllers/PaymentController";
 import { WebhookController } from "./interface/http/controllers/WebhookController";
+import { UserAddressController } from "./interface/http/controllers/UserAddressController";
 import type { Controllers } from "./interface/http/controllers";
 import { CreateDraft } from "./application/use-cases/drafts/CreateDraft";
 import { GetDraftById } from "./application/use-cases/drafts/GetDraftById";
@@ -33,6 +34,8 @@ import { CheckoutCart } from "./application/use-cases/cart/CheckoutCart";
 import { GetProductById } from "./application/use-cases/products/GetProductById";
 import { CreatePaymentPreference } from "./application/use-cases/payments/CreatePaymentPreference";
 import { ProcessPaymentWebhook } from "./application/use-cases/payments/ProcessPaymentWebhook";
+import { GetUserAddresses } from "./application/use-cases/user-addresses/GetUserAddresses";
+import { CreateUserAddress } from "./application/use-cases/user-addresses/CreateUserAddress";
 import { PrismaDraftRepository } from "./infrastructure/repositories/PrismaDraftRepository";
 import { PrismaAssetRepository } from "./infrastructure/repositories/PrismaAssetRepository";
 import { PrismaUploadedImageRepository } from "./infrastructure/repositories/PrismaUploadedImageRepository";
@@ -42,6 +45,7 @@ import { PrismaProductTemplateRepository } from "./infrastructure/repositories/P
 import { PrismaUserRepository } from "./infrastructure/repositories/PrismaUserRepository";
 import { PrismaRoleRepository } from "./infrastructure/repositories/PrismaRoleRepository";
 import { PrismaCartRepository } from "./infrastructure/repositories/PrismaCartRepository";
+import { PrismaUserAddressRepository } from "./infrastructure/repositories/PrismaUserAddressRepository";
 
 class Container {
   private _draftRepository: PrismaDraftRepository | null = null;
@@ -53,6 +57,7 @@ class Container {
   private _userRepository: PrismaUserRepository | null = null;
   private _roleRepository: PrismaRoleRepository | null = null;
   private _cartRepository: PrismaCartRepository | null = null;
+  private _userAddressRepository: PrismaUserAddressRepository | null = null;
 
   private _createDraft: CreateDraft | null = null;
   private _getDraftById: GetDraftById | null = null;
@@ -76,6 +81,8 @@ class Container {
   private _getProductById: GetProductById | null = null;
   private _createPaymentPreference: CreatePaymentPreference | null = null;
   private _processPaymentWebhook: ProcessPaymentWebhook | null = null;
+  private _getUserAddresses: GetUserAddresses | null = null;
+  private _createUserAddress: CreateUserAddress | null = null;
 
   private _draftController: DraftController | null = null;
   private _assetController: AssetController | null = null;
@@ -89,6 +96,7 @@ class Container {
   private _productController: ProductController | null = null;
   private _paymentController: PaymentController | null = null;
   private _webhookController: WebhookController | null = null;
+  private _userAddressController: UserAddressController | null = null;
 
   get draftRepository(): PrismaDraftRepository {
     if (!this._draftRepository) {
@@ -151,6 +159,13 @@ class Container {
       this._cartRepository = new PrismaCartRepository();
     }
     return this._cartRepository;
+  }
+
+  get userAddressRepository(): PrismaUserAddressRepository {
+    if (!this._userAddressRepository) {
+      this._userAddressRepository = new PrismaUserAddressRepository();
+    }
+    return this._userAddressRepository;
   }
 
   get createDraft(): CreateDraft {
@@ -331,6 +346,8 @@ class Container {
         draftRepository: this.draftRepository,
         productRepository: this.productRepository,
         productTemplateRepository: this.productTemplateRepository,
+        userAddressRepository: this.userAddressRepository,
+        userRepository: this.userRepository,
       });
     }
     return this._checkoutCart;
@@ -386,7 +403,7 @@ class Container {
 
   get userController(): UserController {
     if (!this._userController) {
-      this._userController = new UserController();
+      this._userController = new UserController(this.userRepository);
     }
     return this._userController;
   }
@@ -465,6 +482,7 @@ class Container {
       this._processPaymentWebhook = new ProcessPaymentWebhook({
         orderRepository: this.orderRepository,
         draftRepository: this.draftRepository,
+        cartRepository: this.cartRepository,
       });
     }
     return this._processPaymentWebhook;
@@ -477,6 +495,34 @@ class Container {
       );
     }
     return this._webhookController;
+  }
+
+  get getUserAddresses(): GetUserAddresses {
+    if (!this._getUserAddresses) {
+      this._getUserAddresses = new GetUserAddresses({
+        userAddressRepository: this.userAddressRepository,
+      });
+    }
+    return this._getUserAddresses;
+  }
+
+  get createUserAddress(): CreateUserAddress {
+    if (!this._createUserAddress) {
+      this._createUserAddress = new CreateUserAddress({
+        userAddressRepository: this.userAddressRepository,
+      });
+    }
+    return this._createUserAddress;
+  }
+
+  get userAddressController(): UserAddressController {
+    if (!this._userAddressController) {
+      this._userAddressController = new UserAddressController(
+        this.getUserAddresses,
+        this.createUserAddress
+      );
+    }
+    return this._userAddressController;
   }
 
   get controllers(): Controllers {
@@ -493,6 +539,7 @@ class Container {
       productController: this.productController,
       paymentController: this.paymentController,
       webhookController: this.webhookController,
+      userAddressController: this.userAddressController,
     };
   }
 
@@ -507,6 +554,7 @@ class Container {
       assetRepository: this.assetRepository,
       roleRepository: this.roleRepository,
       cartRepository: this.cartRepository,
+      userAddressRepository: this.userAddressRepository,
     };
   }
 }

@@ -7,6 +7,7 @@ import { UploadedImageRepository } from "./UploadedImageRepository";
 import { AssetRepository } from "./AssetRepository";
 import { RoleRepository } from "./RoleRepository";
 import { CartRepository } from "./CartRepository";
+import { UserAddressRepository } from "./UserAddressRepository";
 
 export interface Repositories {
   userRepository: UserRepository;
@@ -18,4 +19,5 @@ export interface Repositories {
   assetRepository: AssetRepository;
   roleRepository: RoleRepository;
   cartRepository: CartRepository;
+  userAddressRepository: UserAddressRepository;
 }

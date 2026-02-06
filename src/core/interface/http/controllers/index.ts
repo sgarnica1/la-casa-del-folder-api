@@ -10,6 +10,7 @@ import { CartController } from "./CartController";
 import { ProductController } from "./ProductController";
 import { PaymentController } from "./PaymentController";
 import { WebhookController } from "./WebhookController";
+import { UserAddressController } from "./UserAddressController";
 
 export interface Controllers {
   draftController: DraftController;
@@ -24,4 +25,5 @@ export interface Controllers {
   productController: ProductController;
   paymentController: PaymentController;
   webhookController: WebhookController;
+  userAddressController: UserAddressController;
 }
