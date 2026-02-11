@@ -358,6 +358,11 @@ export class PrismaDraftRepository implements DraftRepository {
       },
       orderBy: { updatedAt: "desc" },
       include: {
+        product: {
+          select: {
+            name: true,
+          },
+        },
         layoutItems: {
           include: {
             images: {
@@ -388,6 +393,7 @@ export class PrismaDraftRepository implements DraftRepository {
         state: draft.status as DraftStateEnum,
         updatedAt: draft.updatedAt,
         coverUrl,
+        productName: draft.product?.name || null,
       };
     });
   }
