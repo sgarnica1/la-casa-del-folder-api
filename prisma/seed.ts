@@ -1,15 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
-const SEED_USER_ID = '00000000-0000-0000-0000-000000000000';
-const CALENDARS_CATEGORY_ID = '00000000-0000-0000-0000-000000000001';
-const PHOTO_CALENDAR_PRODUCT_ID = '00000000-0000-0000-0000-000000000002';
-const DEFAULT_TEMPLATE_ID = '00000000-0000-0000-0000-000000000003';
-const CUSTOMER_ROLE_ID = '00000000-0000-0000-0000-000000000004';
-const ADMIN_ROLE_ID = '00000000-0000-0000-0000-000000000005';
-
-const SEED_TIMESTAMP = new Date('2024-01-01T00:00:00.000Z');
+const now = new Date();
 
 async function clean() {
   await prisma.orderItem.deleteMany();
@@ -34,82 +28,93 @@ async function clean() {
 }
 
 async function main() {
-  const customerRole = await prisma.role.upsert({
-    where: { id: CUSTOMER_ROLE_ID },
-    update: {},
-    create: {
-      id: CUSTOMER_ROLE_ID,
-      type: 'customer',
-      createdAt: SEED_TIMESTAMP,
-      updatedAt: SEED_TIMESTAMP,
-    },
-  });
+  let customerRole = await prisma.role.findFirst({ where: { type: 'customer' } });
+  if (!customerRole) {
+    customerRole = await prisma.role.create({
+      data: {
+        id: randomUUID(),
+        type: 'customer',
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
 
-  await prisma.role.upsert({
-    where: { id: ADMIN_ROLE_ID },
-    update: {},
-    create: {
-      id: ADMIN_ROLE_ID,
-      type: 'admin',
-      createdAt: SEED_TIMESTAMP,
-      updatedAt: SEED_TIMESTAMP,
-    },
-  });
+  let adminRole = await prisma.role.findFirst({ where: { type: 'admin' } });
+  if (!adminRole) {
+    adminRole = await prisma.role.create({
+      data: {
+        id: randomUUID(),
+        type: 'admin',
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
 
-  await prisma.user.upsert({
-    where: { id: SEED_USER_ID },
-    update: {},
-    create: {
-      id: SEED_USER_ID,
-      clerkId: 'user_test_seed_user',
-      email: 'test@example.com',
-      roleId: customerRole.id,
-      createdAt: SEED_TIMESTAMP,
-      updatedAt: SEED_TIMESTAMP,
-    },
-  });
+  let user = await prisma.user.findFirst({ where: { clerkId: 'user_test_seed_user' } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        id: randomUUID(),
+        clerkId: 'user_test_seed_user',
+        email: 'test@example.com',
+        roleId: customerRole.id,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
 
-  const category = await prisma.productCategory.upsert({
-    where: { id: CALENDARS_CATEGORY_ID },
-    update: {},
-    create: {
-      id: CALENDARS_CATEGORY_ID,
-      name: 'Calendars',
-      status: 'active',
-      description: 'Photo calendars',
-      createdAt: SEED_TIMESTAMP,
-      updatedAt: SEED_TIMESTAMP,
-    },
-  });
+  let category = await prisma.productCategory.findFirst({ where: { name: 'Calendars' } });
+  if (!category) {
+    category = await prisma.productCategory.create({
+      data: {
+        id: randomUUID(),
+        name: 'Calendars',
+        status: 'active',
+        description: 'Photo calendars',
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
 
-  const product = await prisma.product.upsert({
-    where: { id: PHOTO_CALENDAR_PRODUCT_ID },
-    update: {},
-    create: {
-      id: PHOTO_CALENDAR_PRODUCT_ID,
-      categoryId: category.id,
-      name: 'Photo Calendar',
-      description: '12-month photo calendar',
-      basePrice: 500,
-      status: 'active',
-      createdAt: SEED_TIMESTAMP,
-      updatedAt: SEED_TIMESTAMP,
-    },
-  });
+  let product = await prisma.product.findFirst({ where: { name: 'Photo Calendar' } });
+  if (!product) {
+    product = await prisma.product.create({
+      data: {
+        id: randomUUID(),
+        categoryId: category.id,
+        name: 'Photo Calendar',
+        description: '12-month photo calendar',
+        basePrice: 500,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
 
-  const template = await prisma.productTemplate.upsert({
-    where: { id: DEFAULT_TEMPLATE_ID },
-    update: {},
-    create: {
-      id: DEFAULT_TEMPLATE_ID,
+  let template = await prisma.productTemplate.findFirst({
+    where: {
       productId: product.id,
       name: 'Default Calendar Template',
-      description: '12 pages, 1 image per page',
-      status: 'active',
-      createdAt: SEED_TIMESTAMP,
-      updatedAt: SEED_TIMESTAMP,
     },
   });
+  if (!template) {
+    template = await prisma.productTemplate.create({
+      data: {
+        id: randomUUID(),
+        productId: product.id,
+        name: 'Default Calendar Template',
+        description: '12 pages, 1 image per page',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
 
   const constraintsJson = {
     max_images: 1,
@@ -117,56 +122,53 @@ async function main() {
   };
 
   // Cover slot (layoutIndex: 0)
-  const coverLayoutItemId = '00000000-0000-0000-0000-000000000009';
-  await prisma.templateLayoutItem.upsert({
-    where: { id: coverLayoutItemId },
-    update: {},
-    create: {
-      id: coverLayoutItemId,
+  const coverLayoutItem = await prisma.templateLayoutItem.findFirst({
+    where: {
       templateId: template.id,
       layoutIndex: 0,
-      type: 'image',
-      editable: true,
-      constraintsJson: {
-        max_images: 1,
-        aspect_ratio: '3:4',
-      },
-      createdAt: SEED_TIMESTAMP,
-      updatedAt: SEED_TIMESTAMP,
     },
   });
-
-  // Month slots (layoutIndex: 1-12)
-  const layoutItemIds = [
-    '00000000-0000-0000-0000-000000000010',
-    '00000000-0000-0000-0000-000000000011',
-    '00000000-0000-0000-0000-000000000012',
-    '00000000-0000-0000-0000-000000000013',
-    '00000000-0000-0000-0000-000000000014',
-    '00000000-0000-0000-0000-000000000015',
-    '00000000-0000-0000-0000-000000000016',
-    '00000000-0000-0000-0000-000000000017',
-    '00000000-0000-0000-0000-000000000018',
-    '00000000-0000-0000-0000-000000000019',
-    '00000000-0000-0000-0000-00000000001a',
-    '00000000-0000-0000-0000-00000000001b',
-  ];
-
-  for (let i = 0; i < 12; i++) {
-    await prisma.templateLayoutItem.upsert({
-      where: { id: layoutItemIds[i] },
-      update: {},
-      create: {
-        id: layoutItemIds[i],
+  if (!coverLayoutItem) {
+    await prisma.templateLayoutItem.create({
+      data: {
+        id: randomUUID(),
         templateId: template.id,
-        layoutIndex: i + 1,
+        layoutIndex: 0,
         type: 'image',
         editable: true,
-        constraintsJson,
-        createdAt: SEED_TIMESTAMP,
-        updatedAt: SEED_TIMESTAMP,
+        constraintsJson: {
+          max_images: 1,
+          aspect_ratio: '3:4',
+        },
+        createdAt: now,
+        updatedAt: now,
       },
     });
+  }
+
+  // Month slots (layoutIndex: 1-12)
+  for (let i = 0; i < 12; i++) {
+    const layoutIndex = i + 1;
+    const existingItem = await prisma.templateLayoutItem.findFirst({
+      where: {
+        templateId: template.id,
+        layoutIndex,
+      },
+    });
+    if (!existingItem) {
+      await prisma.templateLayoutItem.create({
+        data: {
+          id: randomUUID(),
+          templateId: template.id,
+          layoutIndex,
+          type: 'image',
+          editable: true,
+          constraintsJson,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    }
   }
 }
 

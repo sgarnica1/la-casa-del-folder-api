@@ -1,6 +1,7 @@
 import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
 import { NotFoundError, ValidationError } from "../../../domain/errors";
 import { GetLayoutByTemplateIdInputSchema, GetLayoutByTemplateIdOutput } from "./dtos/GetLayoutByTemplateId.dto";
+import { prisma } from "../../../infrastructure/prisma/client";
 
 export interface GetLayoutByTemplateIdDependencies {
   productTemplateRepository: ProductTemplateRepository;
@@ -18,8 +19,29 @@ export class GetLayoutByTemplateId {
 
     const validatedInput = validationResult.data;
     let actualTemplateId = validatedInput.templateId;
+
     if (validatedInput.templateId === "calendar-template") {
-      actualTemplateId = "00000000-0000-0000-0000-000000000003";
+      // Find the template by product name
+      const product = await prisma.product.findFirst({
+        where: { name: "Photo Calendar" },
+      });
+
+      if (!product) {
+        throw new NotFoundError("Product", "Photo Calendar");
+      }
+
+      const template = await prisma.productTemplate.findFirst({
+        where: {
+          productId: product.id,
+          status: "active",
+        },
+      });
+
+      if (!template) {
+        throw new NotFoundError("Template", `for product ${product.id}`);
+      }
+
+      actualTemplateId = template.id;
     }
 
     const layoutItems = await this.deps.productTemplateRepository.findLayoutItemsByTemplateId(actualTemplateId);
