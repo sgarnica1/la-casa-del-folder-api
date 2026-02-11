@@ -25,6 +25,7 @@ export class MeDraftController {
           state: draft.state,
           updatedAt: draft.updatedAt.toISOString(),
           coverUrl: draft.coverUrl,
+          productName: draft.productName,
         }))
       );
     } catch (error) {

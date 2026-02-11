@@ -27,7 +27,7 @@ export class GetLayoutByTemplateId {
       });
 
       if (!product) {
-        throw new NotFoundError("Product", "Photo Calendar");
+        throw new NotFoundError("Product", "Photo Calendar. Please ensure the database is seeded.");
       }
 
       const template = await prisma.productTemplate.findFirst({
@@ -38,7 +38,7 @@ export class GetLayoutByTemplateId {
       });
 
       if (!template) {
-        throw new NotFoundError("Template", `for product ${product.id}`);
+        throw new NotFoundError("Template", `for product ${product.id}. Please ensure the database is seeded.`);
       }
 
       actualTemplateId = template.id;

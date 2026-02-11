@@ -100,6 +100,7 @@ export const DraftListSummarySchema = z.object({
   state: z.nativeEnum(DraftStateEnum),
   updatedAt: z.date(),
   coverUrl: z.string().nullable(),
+  productName: z.string().nullable(),
 });
 
 export type DraftListSummary = z.infer<typeof DraftListSummarySchema>;
