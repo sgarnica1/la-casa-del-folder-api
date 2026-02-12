@@ -12,7 +12,7 @@ export class PrismaOrderActivityRepository implements OrderActivityRepository {
           orderId: input.orderId,
           activityType: input.activityType,
           description: input.description ?? null,
-          metadata: input.metadata ? (input.metadata as Prisma.InputJsonValue) : null,
+          metadata: input.metadata ? (input.metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
         },
       });
 
