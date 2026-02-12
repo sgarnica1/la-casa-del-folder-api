@@ -34,6 +34,7 @@ import { CheckoutCart } from "./application/use-cases/cart/CheckoutCart";
 import { GetProductById } from "./application/use-cases/products/GetProductById";
 import { CreatePaymentPreference } from "./application/use-cases/payments/CreatePaymentPreference";
 import { ProcessPaymentWebhook } from "./application/use-cases/payments/ProcessPaymentWebhook";
+import { VerifyPaymentByPaymentId } from "./application/use-cases/payments/VerifyPaymentByPaymentId";
 import { GetUserAddresses } from "./application/use-cases/user-addresses/GetUserAddresses";
 import { CreateUserAddress } from "./application/use-cases/user-addresses/CreateUserAddress";
 import { PrismaDraftRepository } from "./infrastructure/repositories/PrismaDraftRepository";
@@ -81,6 +82,7 @@ class Container {
   private _getProductById: GetProductById | null = null;
   private _createPaymentPreference: CreatePaymentPreference | null = null;
   private _processPaymentWebhook: ProcessPaymentWebhook | null = null;
+  private _verifyPaymentByPaymentId: VerifyPaymentByPaymentId | null = null;
   private _getUserAddresses: GetUserAddresses | null = null;
   private _createUserAddress: CreateUserAddress | null = null;
 
@@ -471,7 +473,8 @@ class Container {
   get paymentController(): PaymentController {
     if (!this._paymentController) {
       this._paymentController = new PaymentController(
-        this.createPaymentPreference
+        this.createPaymentPreference,
+        this.verifyPaymentByPaymentId
       );
     }
     return this._paymentController;
@@ -486,6 +489,17 @@ class Container {
       });
     }
     return this._processPaymentWebhook;
+  }
+
+  get verifyPaymentByPaymentId(): VerifyPaymentByPaymentId {
+    if (!this._verifyPaymentByPaymentId) {
+      this._verifyPaymentByPaymentId = new VerifyPaymentByPaymentId({
+        orderRepository: this.orderRepository,
+        draftRepository: this.draftRepository,
+        cartRepository: this.cartRepository,
+      });
+    }
+    return this._verifyPaymentByPaymentId;
   }
 
   get webhookController(): WebhookController {

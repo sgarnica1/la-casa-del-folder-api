@@ -25,6 +25,8 @@ export function createPaymentRoutes(
 
   router.post("/preference", requireAuthApi, userProvisioningMiddleware, asyncHandler((req, res, next) => paymentController.createPreference(req, res, next)));
 
+  router.post("/verify", requireAuthApi, userProvisioningMiddleware, asyncHandler((req, res, next) => paymentController.verifyPayment(req, res, next)));
+
   router.post("/webhook", asyncHandler((req, res, next) => webhookController.handleWebhook(req, res, next)));
 
   return router;
