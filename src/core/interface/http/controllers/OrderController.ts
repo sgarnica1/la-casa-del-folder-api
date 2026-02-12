@@ -2,6 +2,8 @@ import { Response, NextFunction } from "express";
 import { CreateOrder } from "../../../application/use-cases/orders/CreateOrder";
 import { GetAllOrders } from "../../../application/use-cases/orders/GetAllOrders";
 import { GetOrderById } from "../../../application/use-cases/orders/GetOrderById";
+import { UpdateOrderStatus } from "../../../application/use-cases/orders/UpdateOrderStatus";
+import { GetOrderActivities } from "../../../application/use-cases/orders/GetOrderActivities";
 import {
   NotFoundError,
   ConflictError,
@@ -14,7 +16,9 @@ export class OrderController {
   constructor(
     private createOrder: CreateOrder,
     private getAllOrders: GetAllOrders,
-    private getOrderById: GetOrderById
+    private getOrderById: GetOrderById,
+    private updateOrderStatus: UpdateOrderStatus,
+    private getOrderActivities: GetOrderActivities
   ) { }
 
   async create(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
@@ -122,6 +126,75 @@ export class OrderController {
 
       console.error("Get order by id error:", error);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get order" } });
+    }
+  }
+
+  async updateStatus(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+    const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
+    const { orderStatus } = req.body as { orderStatus: "new" | "in_production" | "shipped" };
+
+    if (!id) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Order ID is required" } });
+      return;
+    }
+
+    if (!orderStatus) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Order status is required" } });
+      return;
+    }
+
+    try {
+      const result = await this.updateOrderStatus.execute({ orderId: id, orderStatus });
+
+      res.status(200).json({
+        orderId: result.orderId,
+        orderStatus: result.orderStatus,
+      });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
+        return;
+      }
+
+      console.error("Update order status error:", error);
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update order status" } });
+    }
+  }
+
+  async getActivities(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+    const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
+
+    if (!id) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Order ID is required" } });
+      return;
+    }
+
+    try {
+      const result = await this.getOrderActivities.execute({ orderId: id });
+
+      res.status(200).json({
+        activities: result.activities.map((activity) => ({
+          id: activity.id,
+          orderId: activity.orderId,
+          activityType: activity.activityType,
+          description: activity.description,
+          metadata: activity.metadata,
+          createdAt: activity.createdAt.toISOString(),
+        })),
+      });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
+      console.error("Get order activities error:", error);
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get order activities" } });
     }
   }
 }

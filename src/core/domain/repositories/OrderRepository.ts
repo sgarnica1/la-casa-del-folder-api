@@ -18,6 +18,7 @@ export interface OrderRepository {
   findOrdersByUser(userId: string): Promise<OrderListSummary[]>;
   findOrderByIdAndUser(id: string, userId: string): Promise<OrderWithItems | null>;
   updatePaymentStatus(orderId: string, paymentStatus: "pending" | "paid" | "failed"): Promise<void>;
+  updateOrderStatus(orderId: string, orderStatus: "new" | "in_production" | "shipped"): Promise<void>;
   getDraftIdsFromOrder(orderId: string): Promise<string[]>;
   findPendingOrderByCartId(cartId: string): Promise<Order | null>;
 }

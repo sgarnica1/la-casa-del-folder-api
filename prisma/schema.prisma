@@ -31,6 +31,15 @@ enum OrderStatus {
   shipped
 }
 
+enum OrderActivityType {
+  ORDER_PLACED
+  PAYMENT_CONFIRMED
+  ORDER_READY
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  STATUS_CHANGED
+}
+
 enum LayoutItemType {
   image
   text
@@ -326,6 +335,7 @@ model Order {
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   cart  Cart?       @relation(fields: [cartId], references: [id])
   items OrderItem[]
+  activities OrderActivity[]
 
   @@map("orders")
 }
@@ -344,4 +354,17 @@ model OrderItem {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("order_items")
+}
+
+model OrderActivity {
+  id          String           @id @default(uuid())
+  orderId    String           @map("order_id")
+  activityType OrderActivityType @map("activity_type")
+  description String?
+  metadata    Json?
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_activities")
 }
