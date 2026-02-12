@@ -5,6 +5,8 @@ import { ProductRepository } from "../../../domain/repositories/ProductRepositor
 import { ProductTemplateRepository } from "../../../domain/repositories/ProductTemplateRepository";
 import { UserAddressRepository } from "../../../domain/repositories/UserAddressRepository";
 import { UserRepository } from "../../../domain/repositories/UserRepository";
+import { OrderActivityRepository } from "../../../domain/repositories/OrderActivityRepository";
+import { OrderActivityType } from "../../../domain/entities/OrderActivity";
 import { User } from "../../../domain/entities/User";
 import { DraftMutationPolicy } from "../../../domain/policies/DraftMutationPolicy";
 import { DraftStateEnum } from "../../../domain/entities/Draft";
@@ -24,6 +26,7 @@ export interface CheckoutCartDependencies {
   productTemplateRepository: ProductTemplateRepository;
   userAddressRepository: UserAddressRepository;
   userRepository: UserRepository;
+  orderActivityRepository: OrderActivityRepository;
 }
 
 export interface CheckoutCartInput {
@@ -282,6 +285,17 @@ export class CheckoutCart {
       items: orderItems,
       draftIds,
       shippingAddressJson,
+    });
+
+    // Create ORDER_PLACED activity
+    await this.deps.orderActivityRepository.create({
+      orderId: order.id,
+      activityType: OrderActivityType.ORDER_PLACED,
+      description: "Pedido realizado",
+      metadata: {
+        totalAmount: cartWithItems.total.toString(),
+        itemsCount: orderItems.length,
+      },
     });
 
     // Don't mark cart as converted here - keep it active until payment is confirmed via webhook

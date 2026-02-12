@@ -47,6 +47,10 @@ import { PrismaUserRepository } from "./infrastructure/repositories/PrismaUserRe
 import { PrismaRoleRepository } from "./infrastructure/repositories/PrismaRoleRepository";
 import { PrismaCartRepository } from "./infrastructure/repositories/PrismaCartRepository";
 import { PrismaUserAddressRepository } from "./infrastructure/repositories/PrismaUserAddressRepository";
+import { PrismaOrderActivityRepository } from "./infrastructure/repositories/PrismaOrderActivityRepository";
+import { CreateOrderActivity } from "./application/use-cases/orders/CreateOrderActivity";
+import { GetOrderActivities } from "./application/use-cases/orders/GetOrderActivities";
+import { UpdateOrderStatus } from "./application/use-cases/orders/UpdateOrderStatus";
 
 class Container {
   private _draftRepository: PrismaDraftRepository | null = null;
@@ -59,6 +63,7 @@ class Container {
   private _roleRepository: PrismaRoleRepository | null = null;
   private _cartRepository: PrismaCartRepository | null = null;
   private _userAddressRepository: PrismaUserAddressRepository | null = null;
+  private _orderActivityRepository: PrismaOrderActivityRepository | null = null;
 
   private _createDraft: CreateDraft | null = null;
   private _getDraftById: GetDraftById | null = null;
@@ -85,6 +90,9 @@ class Container {
   private _verifyPaymentByPaymentId: VerifyPaymentByPaymentId | null = null;
   private _getUserAddresses: GetUserAddresses | null = null;
   private _createUserAddress: CreateUserAddress | null = null;
+  private _createOrderActivity: CreateOrderActivity | null = null;
+  private _getOrderActivities: GetOrderActivities | null = null;
+  private _updateOrderStatus: UpdateOrderStatus | null = null;
 
   private _draftController: DraftController | null = null;
   private _assetController: AssetController | null = null;
@@ -168,6 +176,13 @@ class Container {
       this._userAddressRepository = new PrismaUserAddressRepository();
     }
     return this._userAddressRepository;
+  }
+
+  get orderActivityRepository(): PrismaOrderActivityRepository {
+    if (!this._orderActivityRepository) {
+      this._orderActivityRepository = new PrismaOrderActivityRepository();
+    }
+    return this._orderActivityRepository;
   }
 
   get createDraft(): CreateDraft {
@@ -350,6 +365,7 @@ class Container {
         productTemplateRepository: this.productTemplateRepository,
         userAddressRepository: this.userAddressRepository,
         userRepository: this.userRepository,
+        orderActivityRepository: this.orderActivityRepository,
       });
     }
     return this._checkoutCart;
@@ -383,7 +399,9 @@ class Container {
       this._orderController = new OrderController(
         this.createOrder,
         this.getAllOrders,
-        this.getOrderById
+        this.getOrderById,
+        this.updateOrderStatus,
+        this.getOrderActivities
       );
     }
     return this._orderController;
@@ -486,6 +504,7 @@ class Container {
         orderRepository: this.orderRepository,
         draftRepository: this.draftRepository,
         cartRepository: this.cartRepository,
+        orderActivityRepository: this.orderActivityRepository,
       });
     }
     return this._processPaymentWebhook;
@@ -497,6 +516,7 @@ class Container {
         orderRepository: this.orderRepository,
         draftRepository: this.draftRepository,
         cartRepository: this.cartRepository,
+        orderActivityRepository: this.orderActivityRepository,
       });
     }
     return this._verifyPaymentByPaymentId;
@@ -527,6 +547,34 @@ class Container {
       });
     }
     return this._createUserAddress;
+  }
+
+  get createOrderActivity(): CreateOrderActivity {
+    if (!this._createOrderActivity) {
+      this._createOrderActivity = new CreateOrderActivity({
+        orderActivityRepository: this.orderActivityRepository,
+      });
+    }
+    return this._createOrderActivity;
+  }
+
+  get getOrderActivities(): GetOrderActivities {
+    if (!this._getOrderActivities) {
+      this._getOrderActivities = new GetOrderActivities({
+        orderActivityRepository: this.orderActivityRepository,
+      });
+    }
+    return this._getOrderActivities;
+  }
+
+  get updateOrderStatus(): UpdateOrderStatus {
+    if (!this._updateOrderStatus) {
+      this._updateOrderStatus = new UpdateOrderStatus({
+        orderRepository: this.orderRepository,
+        orderActivityRepository: this.orderActivityRepository,
+      });
+    }
+    return this._updateOrderStatus;
   }
 
   get userAddressController(): UserAddressController {
