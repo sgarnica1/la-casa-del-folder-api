@@ -7,6 +7,8 @@ import { ProductRepository } from "../../core/domain/repositories/ProductReposit
 import { ProductTemplateRepository } from "../../core/domain/repositories/ProductTemplateRepository";
 import { UserAddressRepository } from "../../core/domain/repositories/UserAddressRepository";
 import { UserRepository } from "../../core/domain/repositories/UserRepository";
+import { OrderActivityRepository } from "../../core/domain/repositories/OrderActivityRepository";
+import { OrderActivityType } from "../../core/domain/entities/OrderActivity";
 import { DraftStateEnum } from "../../core/domain/entities/Draft";
 import { OrderState } from "../../core/domain/entities/Order";
 import { CartStatusEnum } from "../../core/domain/entities/Cart";
@@ -35,6 +37,7 @@ describe("CheckoutCart", () => {
   let mockProductTemplateRepository: ProductTemplateRepository;
   let mockUserAddressRepository: UserAddressRepository;
   let mockUserRepository: UserRepository;
+  let mockOrderActivityRepository: OrderActivityRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -83,6 +86,11 @@ describe("CheckoutCart", () => {
       update: vi.fn().mockResolvedValue(undefined),
     } as unknown as UserRepository;
 
+    mockOrderActivityRepository = {
+      create: vi.fn(),
+      findByOrderId: vi.fn(),
+    } as unknown as OrderActivityRepository;
+
     checkoutCart = new CheckoutCart({
       cartRepository: mockCartRepository,
       orderRepository: mockOrderRepository,
@@ -91,6 +99,7 @@ describe("CheckoutCart", () => {
       productTemplateRepository: mockProductTemplateRepository,
       userAddressRepository: mockUserAddressRepository,
       userRepository: mockUserRepository,
+      orderActivityRepository: mockOrderActivityRepository,
     });
   });
 
