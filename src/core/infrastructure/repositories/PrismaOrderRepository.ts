@@ -409,6 +409,17 @@ export class PrismaOrderRepository implements OrderRepository {
     }
   }
 
+  async updateOrderStatus(orderId: string, orderStatus: "new" | "in_production" | "shipped"): Promise<void> {
+    try {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { orderStatus },
+      });
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
+
   async getDraftIdsFromOrder(orderId: string): Promise<string[]> {
     try {
       const order = await prisma.order.findUnique({

@@ -1,6 +1,8 @@
 import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { DraftRepository } from "../../../domain/repositories/DraftRepository";
 import { CartRepository } from "../../../domain/repositories/CartRepository";
+import { OrderActivityRepository } from "../../../domain/repositories/OrderActivityRepository";
+import { OrderActivityType } from "../../../domain/entities/OrderActivity";
 import { NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
 import { Payment } from "mercadopago";
 import { MercadoPagoConfig } from "mercadopago";
@@ -10,6 +12,7 @@ export interface VerifyPaymentByPaymentIdDependencies {
   orderRepository: OrderRepository;
   draftRepository: DraftRepository;
   cartRepository: CartRepository;
+  orderActivityRepository: OrderActivityRepository;
 }
 
 export class VerifyPaymentByPaymentId {
@@ -75,6 +78,16 @@ export class VerifyPaymentByPaymentId {
       console.log(`Order ${orderId} payment status updated to ${paymentStatus}`);
 
       if (paymentStatus === "paid") {
+        // Create PAYMENT_CONFIRMED activity
+        await this.deps.orderActivityRepository.create({
+          orderId,
+          activityType: OrderActivityType.PAYMENT_CONFIRMED,
+          description: "Pago confirmado",
+          metadata: {
+            paymentId: paymentId,
+          },
+        });
+
         const draftIds = await this.deps.orderRepository.getDraftIdsFromOrder(orderId);
         console.log(`Marking ${draftIds.length} drafts as ordered for order ${orderId}`);
         for (const draftId of draftIds) {
