@@ -62,6 +62,12 @@ export class MeDraftController {
           id: item.id,
           slotId: `slot-${item.layoutIndex}`,
           imageId: item.imageId,
+          transform: item.transformJson ? {
+            x: (item.transformJson as { x?: number }).x ?? 0,
+            y: (item.transformJson as { y?: number }).y ?? 0,
+            scale: (item.transformJson as { scale?: number }).scale ?? 1,
+            rotation: (item.transformJson as { rotation?: number }).rotation ?? 0,
+          } : undefined,
         })),
         imageIds,
         createdAt: result.draft.createdAt.toISOString(),

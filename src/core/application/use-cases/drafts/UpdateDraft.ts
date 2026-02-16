@@ -51,6 +51,7 @@ export class UpdateDraft {
         layoutItems: validatedInput.layoutItems.map((item) => ({
           slotId: item.slotId,
           imageId: item.imageId,
+          transform: item.transform,
         })),
       });
     } else {
@@ -66,11 +67,20 @@ export class UpdateDraft {
       productId: result.draft.productId,
       templateId: result.draft.templateId,
       title: result.draft.title || null,
-      layoutItems: result.layoutItems.map((item) => ({
-        id: item.id,
-        slotId: `slot-${item.layoutIndex}`,
-        imageId: item.imageId,
-      })),
+      layoutItems: result.layoutItems.map((item) => {
+        const transformJson = item.transformJson as { x?: number; y?: number; scale?: number; rotation?: number } | null;
+        return {
+          id: item.id,
+          slotId: `slot-${item.layoutIndex}`,
+          imageId: item.imageId,
+          transform: transformJson ? {
+            x: transformJson.x ?? 0,
+            y: transformJson.y ?? 0,
+            scale: transformJson.scale ?? 1,
+            rotation: transformJson.rotation ?? 0,
+          } : null,
+        };
+      }),
       createdAt: result.draft.createdAt,
       updatedAt: result.draft.updatedAt,
     };

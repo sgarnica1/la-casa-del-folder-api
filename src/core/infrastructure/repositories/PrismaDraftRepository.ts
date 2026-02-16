@@ -217,6 +217,7 @@ export class PrismaDraftRepository implements DraftRepository {
         id: item.id,
         layoutIndex: item.layoutIndex,
         imageId: item.images[0]?.uploadedImageId || null,
+        transformJson: item.transformJson as Record<string, unknown> | null,
       })),
     };
   }
@@ -236,6 +237,21 @@ export class PrismaDraftRepository implements DraftRepository {
 
           if (!draftLayoutItem) {
             continue;
+          }
+
+          // Update transformJson if provided
+          if (item.transform !== undefined) {
+            await tx.draftLayoutItem.update({
+              where: { id: draftLayoutItem.id },
+              data: {
+                transformJson: item.transform ? {
+                  x: item.transform.x,
+                  y: item.transform.y,
+                  scale: item.transform.scale,
+                  rotation: item.transform.rotation,
+                } : null,
+              },
+            });
           }
 
           await tx.draftLayoutItemImage.deleteMany({
@@ -294,6 +310,7 @@ export class PrismaDraftRepository implements DraftRepository {
           id: item.id,
           layoutIndex: item.layoutIndex,
           imageId: item.images[0]?.uploadedImageId || null,
+          transformJson: item.transformJson as Record<string, unknown> | null,
         })),
       };
     } catch (error) {

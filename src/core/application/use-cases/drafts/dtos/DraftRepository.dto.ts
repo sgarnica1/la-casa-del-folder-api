@@ -44,6 +44,7 @@ export const DraftLayoutItemWithImageSchema = z.object({
   id: z.string(),
   layoutIndex: z.number(),
   imageId: z.string().nullable(),
+  transformJson: z.record(z.string(), z.unknown()).nullable(),
 });
 
 export type DraftLayoutItemWithImage = z.infer<typeof DraftLayoutItemWithImageSchema>;
@@ -59,6 +60,12 @@ export const UpdateLayoutItemsInputSchema = z.object({
   layoutItems: z.array(z.object({
     slotId: z.string(),
     imageId: z.string().nullable(),
+    transform: z.object({
+      x: z.number(),
+      y: z.number(),
+      scale: z.number(),
+      rotation: z.number(),
+    }).nullable().optional(),
   })),
 });
 

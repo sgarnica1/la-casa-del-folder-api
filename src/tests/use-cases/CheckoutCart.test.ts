@@ -8,7 +8,6 @@ import { ProductTemplateRepository } from "../../core/domain/repositories/Produc
 import { UserAddressRepository } from "../../core/domain/repositories/UserAddressRepository";
 import { UserRepository } from "../../core/domain/repositories/UserRepository";
 import { OrderActivityRepository } from "../../core/domain/repositories/OrderActivityRepository";
-import { OrderActivityType } from "../../core/domain/entities/OrderActivity";
 import { DraftStateEnum } from "../../core/domain/entities/Draft";
 import { OrderState } from "../../core/domain/entities/Order";
 import { CartStatusEnum } from "../../core/domain/entities/Cart";
