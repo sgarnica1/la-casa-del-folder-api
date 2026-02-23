@@ -20,6 +20,7 @@ export interface DraftRepository {
   update(id: string, updates: Partial<Draft>): Promise<Draft>;
   updateLayoutItems(draftId: string, input: UpdateLayoutItemsInput): Promise<DraftWithLayoutItemsAndImages>;
   markAsOrdered(draftId: string): Promise<void>;
+  softDelete(draftId: string): Promise<void>;
   findDraftsByUser(userId: string): Promise<DraftListSummary[]>;
   findDraftByIdAndUser(id: string, userId: string): Promise<DraftWithLayoutItemsAndImages | null>;
 }

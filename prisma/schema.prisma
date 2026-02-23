@@ -230,6 +230,7 @@ model Draft {
   templateId String?    @map("template_id")
   title     String?     @db.VarChar(60)
   status    DraftStatus
+  deletedAt DateTime?   @map("deleted_at")
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 

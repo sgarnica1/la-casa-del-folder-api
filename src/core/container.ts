@@ -23,6 +23,7 @@ import { GetAllOrders } from "./application/use-cases/orders/GetAllOrders";
 import { GetOrderById } from "./application/use-cases/orders/GetOrderById";
 import { GetMyDrafts } from "./application/use-cases/drafts/GetMyDrafts";
 import { GetMyDraftById } from "./application/use-cases/drafts/GetMyDraftById";
+import { DeleteDraft } from "./application/use-cases/drafts/DeleteDraft";
 import { GetMyOrders } from "./application/use-cases/orders/GetMyOrders";
 import { GetMyOrderById } from "./application/use-cases/orders/GetMyOrderById";
 import { GetLayoutByTemplateId } from "./application/use-cases/layouts/GetLayoutByTemplateId";
@@ -76,6 +77,7 @@ class Container {
   private _getOrderById: GetOrderById | null = null;
   private _getMyDrafts: GetMyDrafts | null = null;
   private _getMyDraftById: GetMyDraftById | null = null;
+  private _deleteDraft: DeleteDraft | null = null;
   private _getMyOrders: GetMyOrders | null = null;
   private _getMyOrderById: GetMyOrderById | null = null;
   private _getLayoutByTemplateId: GetLayoutByTemplateId | null = null;
@@ -289,6 +291,16 @@ class Container {
     return this._getMyDraftById;
   }
 
+  get deleteDraft(): DeleteDraft {
+    if (!this._deleteDraft) {
+      this._deleteDraft = new DeleteDraft({
+        draftRepository: this.draftRepository,
+        cartRepository: this.cartRepository,
+      });
+    }
+    return this._deleteDraft;
+  }
+
   get getMyOrders(): GetMyOrders {
     if (!this._getMyOrders) {
       this._getMyOrders = new GetMyOrders({
@@ -433,7 +445,8 @@ class Container {
     if (!this._meDraftController) {
       this._meDraftController = new MeDraftController(
         this.getMyDrafts,
-        this.getMyDraftById
+        this.getMyDraftById,
+        this.deleteDraft
       );
     }
     return this._meDraftController;

@@ -8,6 +8,7 @@ export function createMeRoutes(meDraftController: MeDraftController, meOrderCont
 
   router.get("/drafts", asyncHandler((req, res, next) => meDraftController.getMyDrafts(req, res, next)));
   router.get("/drafts/:id", asyncHandler((req, res, next) => meDraftController.getMyDraftById(req, res, next)));
+  router.delete("/drafts/:id", asyncHandler((req, res, next) => meDraftController.deleteDraft(req, res, next)));
 
   router.get("/orders", asyncHandler((req, res, next) => meOrderController.getMyOrders(req, res, next)));
   router.get("/orders/:id", asyncHandler((req, res, next) => meOrderController.getMyOrderById(req, res, next)));
