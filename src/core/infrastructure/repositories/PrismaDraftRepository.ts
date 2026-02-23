@@ -249,7 +249,7 @@ export class PrismaDraftRepository implements DraftRepository {
                   y: item.transform.y,
                   scale: item.transform.scale,
                   rotation: item.transform.rotation,
-                } : null,
+                } : undefined,
               },
             });
           }
