@@ -490,6 +490,7 @@ export class PrismaDraftRepository implements DraftRepository {
         id: item.id,
         layoutIndex: item.layoutIndex,
         imageId: item.images[0]?.uploadedImageId || null,
+        transformJson: item.transformJson as Record<string, unknown> | null,
       })),
     };
   }

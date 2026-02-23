@@ -350,6 +350,7 @@ class Container {
     if (!this._removeCartItem) {
       this._removeCartItem = new RemoveCartItem({
         cartRepository: this.cartRepository,
+        draftRepository: this.draftRepository,
       });
     }
     return this._removeCartItem;
