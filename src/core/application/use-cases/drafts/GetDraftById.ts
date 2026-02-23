@@ -29,11 +29,20 @@ export class GetDraftById {
       productId: draftWithItems.draft.productId,
       templateId: draftWithItems.draft.templateId,
       title: draftWithItems.draft.title || null,
-      layoutItems: draftWithItems.layoutItems.map((item) => ({
-        id: item.id,
-        slotId: `slot-${item.layoutIndex}`,
-        imageId: item.imageId,
-      })),
+      layoutItems: draftWithItems.layoutItems.map((item) => {
+        const transformJson = item.transformJson as { x?: number; y?: number; scale?: number; rotation?: number } | null;
+        return {
+          id: item.id,
+          slotId: `slot-${item.layoutIndex}`,
+          imageId: item.imageId,
+          transform: transformJson ? {
+            x: transformJson.x ?? 0,
+            y: transformJson.y ?? 0,
+            scale: transformJson.scale ?? 1,
+            rotation: transformJson.rotation ?? 0,
+          } : null,
+        };
+      }),
       createdAt: draftWithItems.draft.createdAt,
       updatedAt: draftWithItems.draft.updatedAt,
     };

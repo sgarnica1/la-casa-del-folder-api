@@ -95,8 +95,8 @@ export class PrismaDraftRepository implements DraftRepository {
   }
 
   async findById(id: string): Promise<Draft | null> {
-    const draft = await prisma.draft.findUnique({
-      where: { id },
+    const draft = await prisma.draft.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!draft) {
@@ -115,8 +115,8 @@ export class PrismaDraftRepository implements DraftRepository {
   }
 
   async findByIdWithLayoutItems(id: string): Promise<DraftWithLayoutItems | null> {
-    const draft = await prisma.draft.findUnique({
-      where: { id },
+    const draft = await prisma.draft.findFirst({
+      where: { id, deletedAt: null },
       include: {
         layoutItems: {
           include: {
@@ -184,8 +184,8 @@ export class PrismaDraftRepository implements DraftRepository {
   }
 
   async findByIdWithLayoutItemsAndImages(id: string): Promise<DraftWithLayoutItemsAndImages | null> {
-    const draft = await prisma.draft.findUnique({
-      where: { id },
+    const draft = await prisma.draft.findFirst({
+      where: { id, deletedAt: null },
       include: {
         layoutItems: {
           include: {
@@ -217,6 +217,7 @@ export class PrismaDraftRepository implements DraftRepository {
         id: item.id,
         layoutIndex: item.layoutIndex,
         imageId: item.images[0]?.uploadedImageId || null,
+        transformJson: item.transformJson as Record<string, unknown> | null,
       })),
     };
   }
@@ -236,6 +237,21 @@ export class PrismaDraftRepository implements DraftRepository {
 
           if (!draftLayoutItem) {
             continue;
+          }
+
+          // Update transformJson if provided
+          if (item.transform !== undefined) {
+            await tx.draftLayoutItem.update({
+              where: { id: draftLayoutItem.id },
+              data: {
+                transformJson: item.transform ? {
+                  x: item.transform.x,
+                  y: item.transform.y,
+                  scale: item.transform.scale,
+                  rotation: item.transform.rotation,
+                } : undefined,
+              },
+            });
           }
 
           await tx.draftLayoutItemImage.deleteMany({
@@ -294,6 +310,7 @@ export class PrismaDraftRepository implements DraftRepository {
           id: item.id,
           layoutIndex: item.layoutIndex,
           imageId: item.images[0]?.uploadedImageId || null,
+          transformJson: item.transformJson as Record<string, unknown> | null,
         })),
       };
     } catch (error) {
@@ -352,6 +369,7 @@ export class PrismaDraftRepository implements DraftRepository {
     const drafts = await prisma.draft.findMany({
       where: {
         userId,
+        deletedAt: null,
         status: {
           in: ['editing', 'locked']
         }
@@ -399,8 +417,8 @@ export class PrismaDraftRepository implements DraftRepository {
   }
 
   async findByIdWithSelectedOptions(id: string): Promise<DraftWithSelectedOptions | null> {
-    const draft = await prisma.draft.findUnique({
-      where: { id },
+    const draft = await prisma.draft.findFirst({
+      where: { id, deletedAt: null },
       include: {
         selectedOptions: {
           include: {
@@ -439,9 +457,16 @@ export class PrismaDraftRepository implements DraftRepository {
     };
   }
 
+  async softDelete(draftId: string): Promise<void> {
+    await prisma.draft.update({
+      where: { id: draftId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
   async findDraftByIdAndUser(id: string, userId: string): Promise<DraftWithLayoutItemsAndImages | null> {
     const draft = await prisma.draft.findFirst({
-      where: { id, userId },
+      where: { id, userId, deletedAt: null },
       include: {
         layoutItems: {
           include: {
@@ -473,6 +498,7 @@ export class PrismaDraftRepository implements DraftRepository {
         id: item.id,
         layoutIndex: item.layoutIndex,
         imageId: item.images[0]?.uploadedImageId || null,
+        transformJson: item.transformJson as Record<string, unknown> | null,
       })),
     };
   }
