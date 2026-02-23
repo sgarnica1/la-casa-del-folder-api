@@ -17,6 +17,12 @@ export const GetDraftByIdOutputSchema = z.object({
       id: z.uuid(),
       slotId: z.string(),
       imageId: z.uuid().nullable(),
+      transform: z.object({
+        x: z.number(),
+        y: z.number(),
+        scale: z.number(),
+        rotation: z.number(),
+      }).nullable().optional(),
     })
   ),
   createdAt: z.date(),

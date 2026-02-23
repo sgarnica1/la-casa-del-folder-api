@@ -1,13 +1,15 @@
 import { Response, NextFunction } from "express";
 import { GetMyDrafts } from "../../../application/use-cases/drafts/GetMyDrafts";
 import { GetMyDraftById } from "../../../application/use-cases/drafts/GetMyDraftById";
-import { NotFoundError, ValidationError } from "../../../domain/errors/DomainErrors";
+import { DeleteDraft } from "../../../application/use-cases/drafts/DeleteDraft";
+import { NotFoundError, ValidationError, ConflictError } from "../../../domain/errors/DomainErrors";
 import type { AuthRequest } from "../middleware/authMiddleware";
 
 export class MeDraftController {
   constructor(
     private getMyDraftsUseCase: GetMyDrafts,
-    private getMyDraftByIdUseCase: GetMyDraftById
+    private getMyDraftByIdUseCase: GetMyDraftById,
+    private deleteDraftUseCase: DeleteDraft
   ) { }
 
   async getMyDrafts(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
@@ -62,6 +64,12 @@ export class MeDraftController {
           id: item.id,
           slotId: `slot-${item.layoutIndex}`,
           imageId: item.imageId,
+          transform: item.transformJson ? {
+            x: (item.transformJson as { x?: number }).x ?? 0,
+            y: (item.transformJson as { y?: number }).y ?? 0,
+            scale: (item.transformJson as { scale?: number }).scale ?? 1,
+            rotation: (item.transformJson as { rotation?: number }).rotation ?? 0,
+          } : undefined,
         })),
         imageIds,
         createdAt: result.draft.createdAt.toISOString(),
@@ -80,6 +88,43 @@ export class MeDraftController {
 
       console.error("Get my draft by id error:", error);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to get draft" } });
+    }
+  }
+
+  async deleteDraft(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+    if (!req.userAuth) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      return;
+    }
+
+    const id = typeof req.params.id === "string" ? req.params.id : req.params.id?.[0];
+
+    if (!id) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Draft ID is required" } });
+      return;
+    }
+
+    try {
+      await this.deleteDraftUseCase.execute({ draftId: id }, req.userAuth.userId);
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
+        return;
+      }
+
+      if (error instanceof ConflictError) {
+        res.status(409).json({ error: { code: "CONFLICT", message: error.message } });
+        return;
+      }
+
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message } });
+        return;
+      }
+
+      console.error("Delete draft error:", error);
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete draft" } });
     }
   }
 }

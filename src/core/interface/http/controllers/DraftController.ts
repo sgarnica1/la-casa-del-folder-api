@@ -130,7 +130,12 @@ export class DraftController {
     }
 
     const { layoutItems, title } = req.body as {
-      layoutItems?: Array<{ id: string; slotId: string; imageId: string | null }>;
+      layoutItems?: Array<{ 
+        id: string; 
+        slotId: string; 
+        imageId: string | null;
+        transform?: { x: number; y: number; scale: number; rotation: number };
+      }>;
       title?: string;
     };
 
@@ -142,7 +147,12 @@ export class DraftController {
       });
 
       res.json({
-        ...result,
+        id: result.id,
+        status: result.status,
+        productId: result.productId,
+        templateId: result.templateId,
+        title: result.title,
+        layoutItems: result.layoutItems,
         createdAt: result.createdAt.toISOString(),
         updatedAt: result.updatedAt.toISOString(),
       });
