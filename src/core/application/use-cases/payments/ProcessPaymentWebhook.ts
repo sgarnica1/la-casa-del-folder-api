@@ -93,29 +93,33 @@ export class ProcessPaymentWebhook {
     }
 
     if (order.paymentStatus !== paymentStatus) {
-      await this.deps.orderRepository.updatePaymentStatus(orderId, paymentStatus);
-      console.log(`Order ${orderId} payment status updated to ${paymentStatus}`);
+      // Only update payment status if orderStatus is 'new' (ordered/paid states)
+      // This represents the ordered → paid transition
+      if (order.orderStatus === "new") {
+        await this.deps.orderRepository.updatePaymentStatus(orderId, paymentStatus);
+        console.log(`Order ${orderId} payment status updated to ${paymentStatus}`);
 
-      if (paymentStatus === "paid") {
-        // Create PAYMENT_CONFIRMED activity
-        await this.deps.orderActivityRepository.create({
-          orderId,
-          activityType: OrderActivityType.PAYMENT_CONFIRMED,
-          description: "Pago confirmado",
-          metadata: {
-            paymentId: payment.id?.toString(),
-          },
-        });
+        if (paymentStatus === "paid") {
+          // Create PAYMENT_CONFIRMED activity
+          await this.deps.orderActivityRepository.create({
+            orderId,
+            activityType: OrderActivityType.PAYMENT_CONFIRMED,
+            description: "Pago confirmado",
+            metadata: {
+              paymentId: payment.id?.toString(),
+            },
+          });
 
-        const draftIds = await this.deps.orderRepository.getDraftIdsFromOrder(orderId);
-        console.log(`Marking ${draftIds.length} drafts as ordered for order ${orderId}`);
-        for (const draftId of draftIds) {
-          await this.deps.draftRepository.markAsOrdered(draftId);
+          const draftIds = await this.deps.orderRepository.getDraftIdsFromOrder(orderId);
+          console.log(`Marking ${draftIds.length} drafts as ordered for order ${orderId}`);
+          for (const draftId of draftIds) {
+            await this.deps.draftRepository.markAsOrdered(draftId);
+          }
+          console.log(`All drafts marked as ordered for order ${orderId}`);
+
+          await this.deps.cartRepository.clearCartByOrderId(orderId);
+          console.log(`Cart cleared for order ${orderId}`);
         }
-        console.log(`All drafts marked as ordered for order ${orderId}`);
-
-        await this.deps.cartRepository.clearCartByOrderId(orderId);
-        console.log(`Cart cleared for order ${orderId}`);
       }
     }
   }

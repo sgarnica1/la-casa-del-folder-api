@@ -53,6 +53,7 @@ import { PrismaOrderActivityRepository } from "./infrastructure/repositories/Pri
 import { CreateOrderActivity } from "./application/use-cases/orders/CreateOrderActivity";
 import { GetOrderActivities } from "./application/use-cases/orders/GetOrderActivities";
 import { UpdateOrderStatus } from "./application/use-cases/orders/UpdateOrderStatus";
+import { GetAvailableStatusTransitions } from "./application/use-cases/orders/GetAvailableStatusTransitions";
 
 class Container {
   private _draftRepository: PrismaDraftRepository | null = null;
@@ -97,6 +98,7 @@ class Container {
   private _createOrderActivity: CreateOrderActivity | null = null;
   private _getOrderActivities: GetOrderActivities | null = null;
   private _updateOrderStatus: UpdateOrderStatus | null = null;
+  private _getAvailableStatusTransitions: GetAvailableStatusTransitions | null = null;
 
   private _draftController: DraftController | null = null;
   private _assetController: AssetController | null = null;
@@ -416,7 +418,8 @@ class Container {
         this.getAllOrders,
         this.getOrderById,
         this.updateOrderStatus,
-        this.getOrderActivities
+        this.getOrderActivities,
+        this.getAvailableStatusTransitions
       );
     }
     return this._orderController;
@@ -604,6 +607,15 @@ class Container {
       });
     }
     return this._updateOrderStatus;
+  }
+
+  get getAvailableStatusTransitions(): GetAvailableStatusTransitions {
+    if (!this._getAvailableStatusTransitions) {
+      this._getAvailableStatusTransitions = new GetAvailableStatusTransitions({
+        orderRepository: this.orderRepository,
+      });
+    }
+    return this._getAvailableStatusTransitions;
   }
 
   get userAddressController(): UserAddressController {
