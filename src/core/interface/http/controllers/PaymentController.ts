@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { CreatePaymentPreference } from "../../../application/use-cases/payments/CreatePaymentPreference";
 import { VerifyPaymentByPaymentId } from "../../../application/use-cases/payments/VerifyPaymentByPaymentId";
+import { FakePayment } from "../../../application/use-cases/payments/FakePayment";
 import {
   NotFoundError,
   ValidationError,
@@ -11,7 +12,8 @@ import type { AuthRequest } from "../middleware/authMiddleware";
 export class PaymentController {
   constructor(
     private createPaymentPreference: CreatePaymentPreference,
-    private verifyPaymentByPaymentId: VerifyPaymentByPaymentId
+    private verifyPaymentByPaymentId: VerifyPaymentByPaymentId,
+    private fakePaymentUseCase: FakePayment
   ) { }
 
   async createPreference(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
@@ -86,6 +88,39 @@ export class PaymentController {
 
       console.error("Verify payment error:", error);
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to verify payment" } });
+    }
+  }
+
+  async fakePayment(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+    if (!req.userAuth) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      return;
+    }
+
+    const { orderId } = req.body as { orderId: string };
+
+    if (!orderId) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "orderId is required" } });
+      return;
+    }
+
+    try {
+      const userId = req.userAuth.userId;
+      await this.fakePaymentUseCase.execute({ orderId }, userId);
+      res.status(200).json({ success: true, message: "Payment faked successfully" });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", message: error.message, details: error.details } });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: error.message } });
+        return;
+      }
+
+      console.error("Fake payment error:", error);
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to fake payment" } });
     }
   }
 }

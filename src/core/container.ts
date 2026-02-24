@@ -36,6 +36,7 @@ import { GetProductById } from "./application/use-cases/products/GetProductById"
 import { CreatePaymentPreference } from "./application/use-cases/payments/CreatePaymentPreference";
 import { ProcessPaymentWebhook } from "./application/use-cases/payments/ProcessPaymentWebhook";
 import { VerifyPaymentByPaymentId } from "./application/use-cases/payments/VerifyPaymentByPaymentId";
+import { FakePayment } from "./application/use-cases/payments/FakePayment";
 import { GetUserAddresses } from "./application/use-cases/user-addresses/GetUserAddresses";
 import { CreateUserAddress } from "./application/use-cases/user-addresses/CreateUserAddress";
 import { PrismaDraftRepository } from "./infrastructure/repositories/PrismaDraftRepository";
@@ -90,6 +91,7 @@ class Container {
   private _createPaymentPreference: CreatePaymentPreference | null = null;
   private _processPaymentWebhook: ProcessPaymentWebhook | null = null;
   private _verifyPaymentByPaymentId: VerifyPaymentByPaymentId | null = null;
+  private _fakePayment: FakePayment | null = null;
   private _getUserAddresses: GetUserAddresses | null = null;
   private _createUserAddress: CreateUserAddress | null = null;
   private _createOrderActivity: CreateOrderActivity | null = null;
@@ -502,11 +504,24 @@ class Container {
     return this._createPaymentPreference;
   }
 
+  get fakePayment(): FakePayment {
+    if (!this._fakePayment) {
+      this._fakePayment = new FakePayment({
+        orderRepository: this.orderRepository,
+        draftRepository: this.draftRepository,
+        cartRepository: this.cartRepository,
+        orderActivityRepository: this.orderActivityRepository,
+      });
+    }
+    return this._fakePayment;
+  }
+
   get paymentController(): PaymentController {
     if (!this._paymentController) {
       this._paymentController = new PaymentController(
         this.createPaymentPreference,
-        this.verifyPaymentByPaymentId
+        this.verifyPaymentByPaymentId,
+        this.fakePayment
       );
     }
     return this._paymentController;
