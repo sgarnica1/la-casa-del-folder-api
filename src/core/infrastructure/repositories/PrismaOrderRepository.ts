@@ -409,11 +409,22 @@ export class PrismaOrderRepository implements OrderRepository {
     }
   }
 
-  async updateOrderStatus(orderId: string, orderStatus: "new" | "in_production" | "shipped"): Promise<void> {
+  async updateOrderStatus(orderId: string, orderStatus: "new" | "in_production" | "ready" | "shipped" | "delivered" | "cancelled" | "refunded"): Promise<void> {
     try {
       await prisma.order.update({
         where: { id: orderId },
         data: { orderStatus },
+      });
+    } catch (error) {
+      throw mapPrismaError(error);
+    }
+  }
+
+  async updateOrderStatusAndPaymentStatus(orderId: string, orderStatus: "new" | "in_production" | "ready" | "shipped" | "delivered" | "cancelled" | "refunded", paymentStatus: "pending" | "paid" | "failed"): Promise<void> {
+    try {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { orderStatus, paymentStatus },
       });
     } catch (error) {
       throw mapPrismaError(error);

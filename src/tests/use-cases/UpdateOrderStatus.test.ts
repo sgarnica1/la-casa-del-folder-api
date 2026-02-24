@@ -16,6 +16,7 @@ describe("UpdateOrderStatus", () => {
     mockOrderRepository = {
       findById: vi.fn(),
       updateOrderStatus: vi.fn().mockResolvedValue(undefined),
+      updateOrderStatusAndPaymentStatus: vi.fn().mockResolvedValue(undefined),
     } as unknown as OrderRepository;
 
     mockOrderActivityRepository = {
@@ -56,9 +57,9 @@ describe("UpdateOrderStatus", () => {
     const mockActivity = {
       id: activityId,
       orderId,
-      activityType: OrderActivityType.ORDER_READY,
+      activityType: OrderActivityType.ORDER_IN_PRODUCTION,
       description: "Estado del pedido cambiado a: En Producción",
-      metadata: { previousStatus: "new", newStatus: "in_production" },
+      metadata: { previousStatus: "new", newStatus: "in_production", previousPaymentStatus: "paid", newPaymentStatus: "paid" },
       createdAt,
     };
 
@@ -74,11 +75,13 @@ describe("UpdateOrderStatus", () => {
     expect(mockOrderRepository.updateOrderStatus).toHaveBeenCalledWith(orderId, "in_production");
     expect(mockOrderActivityRepository.create).toHaveBeenCalledWith({
       orderId,
-      activityType: OrderActivityType.ORDER_READY,
+      activityType: OrderActivityType.ORDER_IN_PRODUCTION,
       description: "Estado del pedido cambiado a: En Producción",
       metadata: {
         previousStatus: "new",
         newStatus: "in_production",
+        previousPaymentStatus: "paid",
+        newPaymentStatus: "paid",
       },
     });
 
@@ -86,7 +89,7 @@ describe("UpdateOrderStatus", () => {
     expect(result.orderStatus).toBe("in_production");
   });
 
-  it("should update order status to shipped and create activity", async () => {
+  it("should update order status to ready and create activity", async () => {
     const orderId = "123e4567-e89b-12d3-a456-426614174000";
     const activityId = "123e4567-e89b-12d3-a456-426614174001";
     const createdAt = new Date();
@@ -113,9 +116,9 @@ describe("UpdateOrderStatus", () => {
     const mockActivity = {
       id: activityId,
       orderId,
-      activityType: OrderActivityType.ORDER_SHIPPED,
-      description: "Estado del pedido cambiado a: Enviado",
-      metadata: { previousStatus: "in_production", newStatus: "shipped" },
+      activityType: OrderActivityType.ORDER_READY,
+      description: "Estado del pedido cambiado a: Listo",
+      metadata: { previousStatus: "in_production", newStatus: "ready", previousPaymentStatus: "paid", newPaymentStatus: "paid" },
       createdAt,
     };
 
@@ -124,23 +127,25 @@ describe("UpdateOrderStatus", () => {
 
     const result = await updateOrderStatus.execute({
       orderId,
-      orderStatus: "shipped",
+      orderStatus: "ready",
     });
 
     expect(mockOrderRepository.findById).toHaveBeenCalledWith(orderId);
-    expect(mockOrderRepository.updateOrderStatus).toHaveBeenCalledWith(orderId, "shipped");
+    expect(mockOrderRepository.updateOrderStatus).toHaveBeenCalledWith(orderId, "ready");
     expect(mockOrderActivityRepository.create).toHaveBeenCalledWith({
       orderId,
-      activityType: OrderActivityType.ORDER_SHIPPED,
-      description: "Estado del pedido cambiado a: Enviado",
+      activityType: OrderActivityType.ORDER_READY,
+      description: "Estado del pedido cambiado a: Listo",
       metadata: {
         previousStatus: "in_production",
-        newStatus: "shipped",
+        newStatus: "ready",
+        previousPaymentStatus: "paid",
+        newPaymentStatus: "paid",
       },
     });
 
     expect(result.orderId).toBe(orderId);
-    expect(result.orderStatus).toBe("shipped");
+    expect(result.orderStatus).toBe("ready");
   });
 
   it("should throw ValidationError when orderId is missing", async () => {
@@ -186,7 +191,7 @@ describe("UpdateOrderStatus", () => {
     expect(mockOrderActivityRepository.create).not.toHaveBeenCalled();
   });
 
-  it("should use STATUS_CHANGED activity type for new status", async () => {
+  it("should use STATUS_CHANGED activity type when reactivating a cancelled order", async () => {
     const orderId = "123e4567-e89b-12d3-a456-426614174000";
     const activityId = "123e4567-e89b-12d3-a456-426614174001";
     const createdAt = new Date();
@@ -196,7 +201,7 @@ describe("UpdateOrderStatus", () => {
       userId: "123e4567-e89b-12d3-a456-426614174010",
       totalAmount: 500,
       paymentStatus: "paid" as const,
-      orderStatus: "shipped" as const,
+      orderStatus: "cancelled" as const,
       shippingAddressJson: {},
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -215,7 +220,7 @@ describe("UpdateOrderStatus", () => {
       orderId,
       activityType: OrderActivityType.STATUS_CHANGED,
       description: "Estado del pedido cambiado a: Nuevo",
-      metadata: { previousStatus: "shipped", newStatus: "new" },
+      metadata: { previousStatus: "cancelled", newStatus: "new", previousPaymentStatus: "paid", newPaymentStatus: "paid" },
       createdAt,
     };
 
@@ -232,8 +237,10 @@ describe("UpdateOrderStatus", () => {
       activityType: OrderActivityType.STATUS_CHANGED,
       description: "Estado del pedido cambiado a: Nuevo",
       metadata: {
-        previousStatus: "shipped",
+        previousStatus: "cancelled",
         newStatus: "new",
+        previousPaymentStatus: "paid",
+        newPaymentStatus: "paid",
       },
     });
 

@@ -28,16 +28,23 @@ enum PaymentStatus {
 enum OrderStatus {
   new
   in_production
+  ready
   shipped
+  delivered
+  cancelled
+  refunded
 }
 
 enum OrderActivityType {
   ORDER_PLACED
   PAYMENT_CONFIRMED
+  ORDER_IN_PRODUCTION
   ORDER_READY
   ORDER_SHIPPED
   ORDER_DELIVERED
   STATUS_CHANGED
+  ORDER_CANCELLED
+  ORDER_REFUNDED
 }
 
 enum LayoutItemType {
