@@ -1,6 +1,6 @@
 import { OrderRepository } from "../../../domain/repositories/OrderRepository";
 import { NotFoundError } from "../../../domain/errors/DomainErrors";
-import { ValidateOrderStatusTransition, StatusTransition } from "./ValidateOrderStatusTransition";
+import { ValidateOrderStatusTransition, StatusTransition, OrderState } from "./ValidateOrderStatusTransition";
 
 export interface GetAvailableStatusTransitionsDependencies {
   orderRepository: OrderRepository;
@@ -27,9 +27,9 @@ export class GetAvailableStatusTransitions {
       throw new NotFoundError("Order", input.orderId);
     }
 
-    const currentState = {
-      orderStatus: order.orderStatus as ValidateOrderStatusTransition["orderStatus"],
-      paymentStatus: order.paymentStatus as ValidateOrderStatusTransition["paymentStatus"],
+    const currentState: OrderState = {
+      orderStatus: order.orderStatus as OrderState["orderStatus"],
+      paymentStatus: order.paymentStatus as OrderState["paymentStatus"],
     };
 
     const transitions = ValidateOrderStatusTransition.getAvailableTransitions(currentState);
